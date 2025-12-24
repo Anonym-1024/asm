@@ -1,0 +1,106 @@
+
+#include "vector.h"
+
+
+const char *vector_error_desc(enum vector_error err) {
+    switch (err) {
+        case VEC_SUCCESS:
+        return "Vector success.";
+
+        case VEC_MEM_ERR:
+        return "Vector memory error.";
+
+        case VEC_OUT_OF_BOUNDS_ERR:
+        return "Vector out of bounds error.";
+
+        case VEC_NULL_PTR:
+        return "Vector is uninitialised";
+
+        default:
+        return "Unknown error.";
+    }
+}
+
+enum vector_error vec_init(struct vector *v, size_t capacity, size_t element_size) {
+    v->capacity = capacity;
+    v->element_size = element_size;
+    v->length = 0;
+    
+    v->ptr = malloc(element_size * capacity);
+    if (v->ptr == NULL) {
+        return VEC_MEM_ERR;
+    }
+
+    return VEC_SUCCESS;
+}
+
+enum vector_error vec_push(struct vector *v, void *x) {
+    if (v->ptr == NULL) {
+        return VEC_NULL_PTR;
+    }
+
+    if (v->length >= v->capacity) {
+        v->capacity = v->capacity * 2 + 1;
+        void *tmp = realloc(v->ptr, v->element_size * v->capacity);
+        if (tmp == NULL) {
+            return VEC_MEM_ERR;
+        }
+        v->ptr = tmp;
+    }
+    memcpy((char*)v->ptr + (v->length * v->element_size), x, v->element_size);
+
+    v->length += 1;
+    return VEC_SUCCESS;
+}
+
+
+enum vector_error vec_get(struct vector *v, void *x, size_t index) {
+    if (v->ptr == NULL) {
+        return VEC_NULL_PTR;
+    }
+
+    if (index >= v->length) {
+        return VEC_OUT_OF_BOUNDS_ERR;
+    }
+
+    memcpy(x, (char*)v->ptr + (index * v->element_size), v->element_size);
+    return VEC_SUCCESS;
+}
+
+
+enum vector_error vec_pop(struct vector *v, void *x) {
+    if (v->ptr == NULL) {
+        return VEC_NULL_PTR;
+    }
+
+    if (v->length == 0) {
+        return VEC_OUT_OF_BOUNDS_ERR;
+    }
+
+    memcpy(x, (char*)v->ptr + ((v->length - 1) * v->element_size), v->element_size);
+    return VEC_SUCCESS;
+
+}
+
+
+void *vec_get_unsafe(struct vector *v, size_t index) {
+    return (char*)v->ptr + (index * v->element_size);
+}
+
+void vec_deinit(struct vector *v, void (*destructor)(void*)) {
+    if (destructor != NULL) {
+        for (size_t i = 0; i < v->length; i++) {
+            destructor(vec_get_unsafe(v, i));
+        }
+    }
+
+    v->capacity = 0;
+    v->element_size = 0;
+    v->length = 0;
+    free(v->ptr);
+    v->ptr = NULL;
+}
+
+void vec_empty(struct vector *v) {
+    v->length = 0;
+}

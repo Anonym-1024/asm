@@ -1,0 +1,27 @@
+NAME=a.out
+
+CC      := clang
+CFLAGS  := -Wall -Wextra -O2 -MMD -MP -Isrc
+
+SRC_DIR := src
+OBJ_DIR := build
+
+SRCS := $(shell find $(SRC_DIR) -type f -name '*.c')
+OBJS := $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+DEPS := $(OBJS:.o=.d)
+
+$(NAME): $(OBJS)
+	$(CC) $(OBJS) -o $@
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+-include $(DEPS)
+
+clean:
+	rm -rf $(OBJ_DIR) $(NAME)
+
+
+
+
