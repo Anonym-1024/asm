@@ -1,12 +1,14 @@
 
-const int directives_count = 6;
-const char directives[6][10] = {
-    ".byte",
-    ".bytes",
-    ".rep",
-    ".endrep",
-    ".ascii",
-    ".start"
+const int directives_count = 8;
+const char directives[8][10] = {
+    ".DATA",
+    ".EXEC",
+    ".start",
+    ".extern",
+    ".glob",
+    ".l",
+    ".b",
+    ".f"
 };
 
 const int instructions_count = 56;
@@ -73,7 +75,7 @@ const int macros_count = 3;
 const char macros[3][10] = {
     "!b",
     "!bl",
-    "!mov"
+    "!movl"
 };
 
 const int condition_codes_count = 19;
@@ -144,20 +146,26 @@ const char ports[8][10] = {
 
 const int address_registers_count = 16;
 const char address_registers[16][10] = {
-    "ar0",
-    "ar1",
-    "ar2",
-    "ar3",
-    "ar4",
-    "ar5",
-    "ar6",
-    "ar7",
-    "ar8",
-    "ar9",
-    "ar10",
-    "ar11",
-    "ar12",
-    "ar13",
-    "ar14",
-    "ar15",
+    "r0a",
+    "r1a",
+    "r2a",
+    "r3a",
+    "r4a",
+    "r5a",
+    "r6a",
+    "r7a",
+    "r8a",
+    "r9a",
+    "r10a",
+    "r11a",
+    "r12a",
+    "r13a",
+    "r14a",
+    "r15a"
+};
+
+const int data_units_count = 2;
+const char data_units[2][10] = {
+    "byte",
+    "bytes"
 };

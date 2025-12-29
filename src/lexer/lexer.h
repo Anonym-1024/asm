@@ -6,13 +6,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include "libs/utilities/utilities.h"
 
-#include "resources/resources.h"
+
+
 #include "lexer_error.h"
+#include "libs/vector/vector.h"
 
 enum token_kind {
     TOKEN_DIR,
+    TOKEN_DATA_UNIT,
     TOKEN_INSTR,
     TOKEN_MACRO,
     TOKEN_COND_CODE,
@@ -31,8 +33,18 @@ struct token {
     enum token_kind kind;
     char *lexeme;
     unsigned long line;
+    unsigned long col;
 };
 
-struct lexer_error tokenise(const char *in, unsigned long n, struct token *out);
+enum lexer_result {
+    LEX_OK,
+    LEX_ERR
+};
+
+
+const char *token_desc(struct token *t);
+
+
+enum lexer_result tokenise(const char *in, unsigned long n, struct vector *out, struct lexer_error *error);
 
 #endif

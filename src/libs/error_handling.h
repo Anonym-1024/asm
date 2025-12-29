@@ -4,9 +4,9 @@
 
 #define NO_ERROR 0
 
-#define try_else(fn, err) \
+#define try_else(fn, v, err) \
 { \
-    if (fn != NO_ERROR) { \
+    if (fn != v) { \
         err; \
     } \
 }

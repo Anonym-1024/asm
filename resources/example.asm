@@ -1,21 +1,10 @@
+.DATA; comment
 
-var:
-    .byte
-    .bytes[2] {89, 78}
-    .rep[4]
-        .byte 34
-    .end
+.EXEC
 
-main:
-    ldr r5, r7
+mov r4 r5
 
 
 
-fn:
-
-
->loop:
-
->cond:
-
-
+a
+   

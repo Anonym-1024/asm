@@ -4,7 +4,7 @@
 
 const char *vector_error_desc(enum vector_error err) {
     switch (err) {
-        case VEC_SUCCESS:
+        case VEC_OK:
         return "Vector success.";
 
         case VEC_MEM_ERR:
@@ -31,7 +31,7 @@ enum vector_error vec_init(struct vector *v, size_t capacity, size_t element_siz
         return VEC_MEM_ERR;
     }
 
-    return VEC_SUCCESS;
+    return VEC_OK;
 }
 
 enum vector_error vec_push(struct vector *v, void *x) {
@@ -50,7 +50,7 @@ enum vector_error vec_push(struct vector *v, void *x) {
     memcpy((char*)v->ptr + (v->length * v->element_size), x, v->element_size);
 
     v->length += 1;
-    return VEC_SUCCESS;
+    return VEC_OK;
 }
 
 
@@ -64,7 +64,7 @@ enum vector_error vec_get(struct vector *v, void *x, size_t index) {
     }
 
     memcpy(x, (char*)v->ptr + (index * v->element_size), v->element_size);
-    return VEC_SUCCESS;
+    return VEC_OK;
 }
 
 
@@ -78,7 +78,8 @@ enum vector_error vec_pop(struct vector *v, void *x) {
     }
 
     memcpy(x, (char*)v->ptr + ((v->length - 1) * v->element_size), v->element_size);
-    return VEC_SUCCESS;
+    v->length -= 1;
+    return VEC_OK;
 
 }
 
