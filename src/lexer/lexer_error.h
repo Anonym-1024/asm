@@ -22,8 +22,8 @@ enum lexer_error_kind {
 
 struct lexer_error {
     enum lexer_error_kind kind;
-    unsigned long line;
-    unsigned long col;
+    size_t line;
+    size_t col;
 };
 
 char *lexer_error_desc(struct lexer_error *err);

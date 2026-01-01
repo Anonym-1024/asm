@@ -8,15 +8,14 @@
 
 struct lexer_context {
     const char *in;
-    unsigned long n;
-    unsigned long index;
+    size_t n;
+    size_t index;
 
     struct vector out;
-    bool is_new_line;
-
-    unsigned long line;
-    unsigned long col;
-    unsigned long start_col;
+    
+    size_t line;
+    size_t col;
+    size_t start_col;
 
     struct vector buffer;
 
@@ -76,32 +75,21 @@ static void pop_char(struct lexer_context *ctx) {
 }
 
 
-
-static enum lexer_result add_token(struct lexer_context *ctx, enum token_kind kind, unsigned long col) {
+void add_token(struct lexer_context *ctx, enum token_kind kind) {
     
 
     struct token t;
     t.kind = kind;
     t.line = ctx->line;
-    t.col = col;
+    t.col = ctx->start_col;
 
     t.lexeme = ctx->buffer.ptr;
     
 
     
-    if (vec_push(&ctx->out, &t) != VEC_OK) {
-        ctx->error = LEX_MEM_ERR;
-        return LEX_ERR;
-    } 
-       
-
+    vec_pushs(&ctx->out, &t);
     
-    if (vec_init(&ctx->buffer, 10, sizeof(char)) != VEC_OK) {
-        ctx->error = LEX_MEM_ERR;
-        return LEX_ERR;
-    } 
-
-    return LEX_OK;
+    vec_inits(&ctx->buffer, 10, sizeof(char));
 }
 
 
@@ -119,16 +107,11 @@ static enum lexer_result read_new_line(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
     char c = '\n';
     
-    if (!ctx->is_new_line) {
-        if (vec_push(&ctx->buffer, &c) != VEC_OK) {
-            ctx->error = LEX_MEM_ERR;
-            return LEX_ERR;
-        }
+    
+    vec_pushs(&ctx->buffer, &c);
 
-        if (add_token(ctx, TOKEN_PUNCT, ctx->start_col) != LEX_OK) {
-            return LEX_ERR;
-        }
-    }
+    add_token(ctx, TOKEN_PUNCT);
+    
     pop_char(ctx);
 
     ctx->col = 1;
@@ -147,21 +130,13 @@ static enum lexer_result read_whitespace(struct lexer_context *ctx) {
 static enum lexer_result read_punctuation(struct lexer_context *ctx, char c) {
     ctx->start_col = ctx->col;
 
-    if (vec_push(&ctx->buffer, &c) != VEC_OK) {
-        ctx->error = LEX_MEM_ERR;
-        return LEX_ERR;
-    }
+    vec_pushs(&ctx->buffer, &c);
     pop_char(ctx);
 
     char term = 0;
-    if (vec_push(&ctx->buffer, &term) != VEC_OK) {
-        ctx->error = LEX_MEM_ERR;
-        return LEX_ERR;
-    }
+    vec_pushs(&ctx->buffer, &term);
 
-    if (add_token(ctx, TOKEN_PUNCT, ctx->start_col) != LEX_OK) {
-        return LEX_ERR;
-    }
+    add_token(ctx, TOKEN_PUNCT);
     return LEX_OK;
 }
 
@@ -180,34 +155,23 @@ static enum lexer_result read_directive(struct lexer_context *ctx) {
 
     char c;
     get_char(ctx, &c);
-    if (vec_push(&ctx->buffer, &c) != VEC_OK) {
-        ctx->error = LEX_MEM_ERR;
-        return LEX_ERR;
-    }
+    vec_pushs(&ctx->buffer, &c);
     pop_char(ctx);
 
     
     while (get_char(ctx, &c) == true && is_word_char(c)) {
-        if (vec_push(&ctx->buffer, &c) != VEC_OK) {
-            ctx->error = LEX_MEM_ERR;
-            return LEX_ERR;
-        }
+        vec_pushs(&ctx->buffer, &c);
         pop_char(ctx);
     }
 
     char term = 0;
-    if (vec_push(&ctx->buffer, &term) != VEC_OK) {
-        ctx->error = LEX_MEM_ERR;
-        return LEX_ERR;
-    }
+    vec_pushs(&ctx->buffer, &term);
     if (!is_directive(ctx->buffer.ptr)) {
         ctx->error = LEX_INV_DIR;
         return LEX_ERR;
     }
 
-    if (add_token(ctx, TOKEN_DIR, ctx->start_col) != LEX_OK) {
-        return LEX_ERR;
-    }
+    add_token(ctx, TOKEN_DIR);
 
     return LEX_OK;
 }
@@ -227,25 +191,16 @@ static enum lexer_result read_macro(struct lexer_context *ctx) {
 
     char c;
     get_char(ctx, &c);
-    if (vec_push(&ctx->buffer, &c) != VEC_OK) {
-        ctx->error = LEX_MEM_ERR;
-        return LEX_ERR;
-    }
+    vec_pushs(&ctx->buffer, &c);
     pop_char(ctx);
 
     
     while (get_char(ctx, &c) == true && is_word_char(c)) {
-        if (vec_push(&ctx->buffer, &c) != VEC_OK) {
-            ctx->error = LEX_MEM_ERR;
-            return LEX_ERR;
-        }
+        vec_pushs(&ctx->buffer, &c);
         pop_char(ctx);
     }
     char term = 0;
-    if (vec_push(&ctx->buffer, &term) != VEC_OK) {
-        ctx->error = LEX_MEM_ERR;
-        return LEX_ERR;
-    }
+    vec_pushs(&ctx->buffer, &term);
 
 
     if (!is_macro(ctx->buffer.ptr)) {
@@ -253,9 +208,7 @@ static enum lexer_result read_macro(struct lexer_context *ctx) {
         return LEX_ERR;
     }
 
-    if (add_token(ctx, TOKEN_MACRO, ctx->start_col) != LEX_OK) {
-        return LEX_ERR;
-    }
+    add_token(ctx, TOKEN_MACRO);
 
     return LEX_OK;
 }
@@ -348,24 +301,16 @@ static enum lexer_result read_word(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
     char c;
     while (get_char(ctx, &c) == true && is_word_char(c)) {
-        if (vec_push(&ctx->buffer, &c) != VEC_OK) {
-            ctx->error = LEX_MEM_ERR;
-            return LEX_ERR;
-        }
+        vec_pushs(&ctx->buffer, &c);
         pop_char(ctx);
     }
     char term = 0;
-    if (vec_push(&ctx->buffer, &term) != VEC_OK) {
-        ctx->error = LEX_MEM_ERR;
-        return LEX_ERR;
-    }
+    vec_pushs(&ctx->buffer, &term);
 
     enum token_kind kind = get_word_kind(ctx->buffer.ptr);
     
 
-    if (add_token(ctx, kind, ctx->start_col) != LEX_OK) {
-        return LEX_ERR;
-    }
+    add_token(ctx, kind);
 
     return LEX_OK;
 }
@@ -381,10 +326,7 @@ static enum lexer_result read_ascii(struct lexer_context *ctx) {
             ctx->error = LEX_INV_ASCII_LIT;
             return LEX_ERR;
         }
-        if (vec_push(&ctx->buffer, &c) != VEC_OK) {
-            ctx->error = LEX_MEM_ERR;
-            return LEX_ERR;
-        }
+        vec_pushs(&ctx->buffer, &c);
         pop_char(ctx);
     }
     if (c != '"') {
@@ -394,14 +336,9 @@ static enum lexer_result read_ascii(struct lexer_context *ctx) {
     pop_char(ctx);
 
     char term = 0;
-    if (vec_push(&ctx->buffer, &term) != VEC_OK) {
-        ctx->error = LEX_MEM_ERR;
-        return LEX_ERR;
-    }
+    vec_pushs(&ctx->buffer, &term);
 
-    if (add_token(ctx, TOKEN_ASCII, ctx->start_col) != LEX_OK) {
-        return LEX_ERR;
-    }
+    add_token(ctx, TOKEN_ASCII);
 
     return LEX_OK;
 
@@ -413,37 +350,23 @@ static enum lexer_result read_number(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
     char c;
     get_char(ctx, &c);
-    if(vec_push(&ctx->buffer, &c) != VEC_OK) {
-        ctx->error = LEX_MEM_ERR;
-        return LEX_ERR;
-    }
+    vec_pushs(&ctx->buffer, &c);
     pop_char(ctx);
 
     while (get_char(ctx, &c) == true && is_hex_digit_char(c)) {
-        if (vec_push(&ctx->buffer, &c) != VEC_OK) {
-            ctx->error = LEX_MEM_ERR;
-            return LEX_ERR;
-        }
+        vec_pushs(&ctx->buffer, &c);
         pop_char(ctx);
     }
 
     if (get_char(ctx, &c) == true && is_radix_char(c)) {
-         if (vec_push(&ctx->buffer, &c) != VEC_OK) {
-            ctx->error = LEX_MEM_ERR;
-            return LEX_ERR;
-        }
+         vec_pushs(&ctx->buffer, &c);
         pop_char(ctx);
     }
 
     char term = 0;
-    if (vec_push(&ctx->buffer, &term) != VEC_OK) {
-        ctx->error = LEX_MEM_ERR;
-        return LEX_ERR;
-    }
+    vec_pushs(&ctx->buffer, &term);
 
-    if (add_token(ctx, TOKEN_NUM, ctx->start_col) != LEX_OK) {
-        return LEX_ERR;
-    }
+    add_token(ctx, TOKEN_NUM);
 
 
 
@@ -452,86 +375,89 @@ static enum lexer_result read_number(struct lexer_context *ctx) {
 
 
 
-enum lexer_result tokenise(const char *in, unsigned long n, struct vector *out, struct lexer_error *error) {
+enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct lexer_error *error) {
 
     struct lexer_context ctx = {
         .in = in,
         .n = n,
         .index = 0,
 
-        .is_new_line = false,
         .line = 1,
         .col = 1,
         .start_col = 1,
 
         .error = LEX_UNKNOWN_ERR
     };
-    if (vec_init(&ctx.buffer, 10, sizeof(char)) != VEC_OK ) {
-        ctx.error = LEX_MEM_ERR;
-        goto _err;
-    }
-    if (vec_init(&ctx.out, 100, sizeof(struct token)) != VEC_OK) {
-        ctx.error = LEX_MEM_ERR;
-        goto _err;
-    }
+    vec_inits(&ctx.buffer, 10, sizeof(char));
+    vec_inits(&ctx.out, 100, sizeof(struct token));
 
 
     char c;
 
     while (get_char(&ctx, &c) == true) {
         if (c == ';') {
-            if (read_comment(&ctx) != LEX_OK) {
-                goto _err;
+            if (read_comment(&ctx) == LEX_ERR) {
+                goto _error;
             }
         } else if (c == '\n') {
-            if (read_new_line(&ctx) != LEX_OK) {
-                goto _err;
+            if (read_new_line(&ctx) == LEX_ERR) {
+                goto _error;
             }
         } else if (is_whitespace_char(c)) {
-            if (read_whitespace(&ctx) != LEX_OK) {
-                goto _err;
+            if (read_whitespace(&ctx) == LEX_ERR) {
+                goto _error;
             }
         } else if (is_punctuation_char(c)) {
-            if (read_punctuation(&ctx, c) != LEX_OK) {
-                goto _err;
+            if (read_punctuation(&ctx, c) == LEX_ERR) {
+                goto _error;
             }
         } else if (c == '.') {
-            if (read_directive(&ctx) != LEX_OK) {
-                goto _err;
+            if (read_directive(&ctx) == LEX_ERR) {
+                goto _error;
             }
         } else if (c == '!') {
-            if (read_macro(&ctx) != LEX_OK) {
-                goto _err;
+            if (read_macro(&ctx) == LEX_ERR) {
+                goto _error;
             }
         } else if (c == '"') {
-            if (read_ascii(&ctx) != LEX_OK) {
-                goto _err;
+            if (read_ascii(&ctx) == LEX_ERR) {
+                goto _error;
             }
         } else if (is_digit_char(c) || c == '-') {
-            if (read_number(&ctx) != LEX_OK) {
-                goto _err;
+            if (read_number(&ctx) == LEX_ERR) {
+                goto _error;
             }
         } else if (is_word_start_char(c)) {
-            if (read_word(&ctx) != LEX_OK) {
-                goto _err;
+            if (read_word(&ctx) == LEX_ERR) {
+                goto _error;
             }
         } else {
             ctx.error = LEX_INV_CHAR;
-            goto _err;
-        }
-
-        if (c == '\n') {
-            ctx.is_new_line = true;
-        } else {
-            ctx.is_new_line = false;
+            goto _error;
         }
     }
 
+    
+    struct token eof = {
+        .kind = TOKEN_EOF,
+        .line = 0,
+        .col = 0,
+        .lexeme = mallocs(sizeof(char)),
+    };
+    *eof.lexeme = 0;
+
+    vec_pushs(&ctx.out, &eof);
+
     *out = ctx.out;
+
+
+
+    vec_deinit(&ctx.buffer, NULL);
+    vec_deinit(&ctx.out, NULL);
 
     return LEX_OK;
 
-    _err:
+    _error:
 
     vec_deinit(&ctx.buffer, NULL);
     vec_deinit(&ctx.out, NULL);
@@ -588,7 +514,7 @@ const char *token_desc(struct token *t) {
         break;
 
         case TOKEN_EOF:
-        kind = "end of file";
+        return "TOKEN: end of file";
         break;
 
         case TOKEN_PORT:
@@ -606,7 +532,7 @@ const char *token_desc(struct token *t) {
 
 
     char *out;
-    asprintf(&out, "TOKEN [%ld:%ld]: { Kind: %s; Lexeme: %s }", t->line, t->col, kind, t->lexeme);
+    asprintfs(&out, "TOKEN [%ld:%ld]: { Kind: %s; Lexeme: %s }", t->line, t->col, kind, t->lexeme);
 
     return out;
 }

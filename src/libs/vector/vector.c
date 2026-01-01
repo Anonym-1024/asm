@@ -105,3 +105,33 @@ void vec_deinit(struct vector *v, void (*destructor)(void*)) {
 void vec_empty(struct vector *v) {
     v->length = 0;
 }
+
+
+
+void vec_inits(struct vector *v, size_t capacity, size_t element_size) {
+    if (vec_init(v, capacity, element_size) != VEC_OK) {
+        printf("fatal error.");
+        exit(1);
+    }
+}
+
+void vec_pushs(struct vector *v, void *x) {
+    if (vec_push(v, x) != VEC_OK) {
+        printf("fatal error.");
+        exit(1);
+    }
+}
+
+void vec_gets(struct vector *v, void *x, size_t index) {
+    if (vec_get(v, x, index) != VEC_OK) {
+        printf("fatal error.");
+        exit(1);
+    }
+}
+
+void vec_pops(struct vector *v, void *x) {
+    if (vec_push(v, x) != VEC_OK) {
+        printf("fatal error.");
+        exit(1);
+    }
+}

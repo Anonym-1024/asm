@@ -4,7 +4,7 @@
 #include "libs/vector/vector.h"
 #include "libs/error_handling.h"
 #include "libs/utilities/utilities.h"
-
+#include "parser/parser.h"
 
 
 
@@ -36,6 +36,12 @@ int main(void) {
     } else {
         printf("\033[31m%s", lexer_error_desc(&err));
     }
+
+    struct cst_node j;
+    struct parser_error k;
+    parse(out.ptr, out.length, &j, &k);
     
+    
+    printf("%s", parser_error_desc(&k));
     return 0;
 }

@@ -32,8 +32,8 @@ enum token_kind {
 struct token {
     enum token_kind kind;
     char *lexeme;
-    unsigned long line;
-    unsigned long col;
+    size_t line;
+    size_t col;
 };
 
 enum lexer_result {
@@ -45,6 +45,6 @@ enum lexer_result {
 const char *token_desc(struct token *t);
 
 
-enum lexer_result tokenise(const char *in, unsigned long n, struct vector *out, struct lexer_error *error);
+enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct lexer_error *error);
 
 #endif

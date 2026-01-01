@@ -5,7 +5,7 @@
 
 #include <sys/stat.h>
 #include <unistd.h>
-
+#include <stdarg.h>
 
 
 off_t get_file_size(const char *path) {
@@ -24,5 +24,25 @@ bool contains_str(const char **array, size_t n, const char *element) {
     return false;
 }
 
+void *mallocs(size_t size) {
+    void *p = malloc(size);
+    if (p == NULL) {
+        FATAL_ERR;
+    }
+    return p;
+}
+
+void asprintfs(char **strp, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+
+    if (vasprintf(strp, fmt, args) == -1) {
+        va_end(args);
+        FATAL_ERR;
+    }
+
+    va_end(args);
+}
 
 #endif

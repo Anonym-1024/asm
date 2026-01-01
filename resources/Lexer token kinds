@@ -1,0 +1,24 @@
+Directives:
+    .DATA
+    .EXEC
+    .start
+    .macro
+    .endm
+    .rep
+    .endr
+    .import
+    .export
+
+
+Data units:
+    byte
+    bytes
+    ascii
+
+Instructions: 
+    mov...
+
+Pseudo instructions:
+    movl
+    b
+

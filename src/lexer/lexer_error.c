@@ -1,5 +1,6 @@
 
 #include "lexer_error.h"
+#include "libs/utilities/utilities.h"
 
 
 char *lexer_error_desc(struct lexer_error *err) {
@@ -41,7 +42,7 @@ char *lexer_error_desc(struct lexer_error *err) {
     }
 
     char *out;
-    asprintf(&out, "LEXER ERROR [%ld:%ld]: %s", err->line, err->col, msg);
+    asprintfs(&out, "LEXER ERROR [%ld:%ld]: %s", err->line, err->col, msg);
 
     return out;
     

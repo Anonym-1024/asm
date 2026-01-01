@@ -38,6 +38,16 @@ void vec_empty(struct vector *v);
 
 
 
+void vec_inits(struct vector *v, size_t capacity, size_t element_size);
+
+void vec_pushs(struct vector *v, void *x);
+
+void vec_gets(struct vector *v, void *x, size_t index);
+
+void vec_pops(struct vector *v, void *x);
+
+
+
 
 
 

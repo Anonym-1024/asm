@@ -4,8 +4,6 @@ const char directives[8][10] = {
     ".DATA",
     ".EXEC",
     ".start",
-    ".extern",
-    ".glob",
     ".l",
     ".b",
     ".f"
