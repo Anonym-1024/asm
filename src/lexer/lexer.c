@@ -469,7 +469,7 @@ enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct 
 
 
 
-const char *token_desc(struct token *t) {
+void token_desc(struct token *t, char **out) {
     const char *kind;
 
     switch (t->kind) {
@@ -514,7 +514,7 @@ const char *token_desc(struct token *t) {
         break;
 
         case TOKEN_EOF:
-        return "TOKEN: end of file";
+        kind = "end of file";
         break;
 
         case TOKEN_PORT:
@@ -531,8 +531,8 @@ const char *token_desc(struct token *t) {
     }
 
 
-    char *out;
-    asprintfs(&out, "TOKEN [%ld:%ld]: { Kind: %s; Lexeme: %s }", t->line, t->col, kind, t->lexeme);
+    
+    asprintfs(out, "TOKEN [%ld:%ld]: { Kind: %s; Lexeme: %s }", t->line, t->col, kind, t->lexeme);
 
-    return out;
+    
 }

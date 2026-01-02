@@ -42,7 +42,7 @@ enum lexer_result {
 };
 
 
-const char *token_desc(struct token *t);
+void token_desc(struct token *t, char **out);
 
 
 enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct lexer_error *error);

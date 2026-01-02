@@ -16,7 +16,7 @@ off_t get_file_size(const char *path) {
 
 
 bool contains_str(const char **array, size_t n, const char *element) {
-    for (int i = 0; i < n; i++) {
+    for (size_t i = 0; i < n; i++) {
         if (strcmp(array[i], element) == 0) {
             return true;
         }

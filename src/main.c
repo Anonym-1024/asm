@@ -28,13 +28,16 @@ int main(void) {
     
     fflush(stdout);
     if (tokenise(in, s, &out, &err) == LEX_OK) {
-        for (int i = 0; i < out.length; i++) {
+        for (size_t i = 0; i < out.length; i++) {
             struct token t;
             vec_get(&out, &t, i);
-            printf("\033[32m%s\n", token_desc(&t));
+            char *d;
+            token_desc(&t, &d);
+            printf("\033[32m%s\n", d);
         }
     } else {
         printf("\033[31m%s", lexer_error_desc(&err));
+        return 0;
     }
 
     struct cst_node j;
@@ -42,6 +45,8 @@ int main(void) {
     parse(out.ptr, out.length, &j, &k);
     
     
-    printf("%s", parser_error_desc(&k));
+    
+    printf("%s\n", parser_error_desc(&k));
+    print_cst_node(stdout, &j, 0);
     return 0;
 }

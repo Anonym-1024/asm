@@ -84,14 +84,14 @@ enum vector_error vec_pop(struct vector *v, void *x) {
 }
 
 
-void *vec_get_unsafe(struct vector *v, size_t index) {
+void *vec_get_ptr(struct vector *v, size_t index) {
     return (char*)v->ptr + (index * v->element_size);
 }
 
 void vec_deinit(struct vector *v, void (*destructor)(void*)) {
     if (destructor != NULL) {
         for (size_t i = 0; i < v->length; i++) {
-            destructor(vec_get_unsafe(v, i));
+            destructor(vec_get_ptr(v, i));
         }
     }
 

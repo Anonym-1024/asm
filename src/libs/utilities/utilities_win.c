@@ -1,4 +1,4 @@
- 
+static char a;
 #if defined (WIN32) || defined (_WIN32)
 
 

@@ -32,7 +32,7 @@ enum vector_error vec_pop(struct vector *v, void *x);
 
 void vec_deinit(struct vector *v, void (*destructor)(void*));
 
-void *vec_get_unsafe(struct vector *v, size_t index);
+void *vec_get_ptr(struct vector *v, size_t index);
 
 void vec_empty(struct vector *v);
 
@@ -47,7 +47,7 @@ void vec_gets(struct vector *v, void *x, size_t index);
 void vec_pops(struct vector *v, void *x);
 
 
-
+#define vec_get_ptr_t(v, i, t) (t*)(vec_get_ptr((v), (i)))
 
 
 

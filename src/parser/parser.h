@@ -47,12 +47,18 @@ enum cst_node_kind {
 
 };
 
+
+
 struct cst_node {
     enum cst_node_kind kind;
 
     struct token terminal;
     struct vector children;
 };
+
+
+void print_cst_node(FILE *f, struct cst_node *n, int indent);
+
 
 enum parser_result {
     PARSER_OK,

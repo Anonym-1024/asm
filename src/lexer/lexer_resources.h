@@ -1,6 +1,6 @@
 
 #ifndef __LEXER_RESOURCES_HEADER__
-#define __RESOURCES_HEADER__
+#define __LEXER_RESOURCES_HEADER__
 
 
 
