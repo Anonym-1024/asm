@@ -1,6 +1,6 @@
 
-#ifndef __LEXER_ERROR_HEADER
-#define __LEXER_ERROR_HEADER
+#ifndef __LEXER_ERROR_HEADER__
+#define __LEXER_ERROR_HEADER__
 
 
 #include <stdlib.h>

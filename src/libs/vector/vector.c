@@ -43,6 +43,7 @@ enum vector_error vec_push(struct vector *v, void *x) {
         v->capacity = v->capacity * 2 + 1;
         void *tmp = realloc(v->ptr, v->element_size * v->capacity);
         if (tmp == NULL) {
+            
             return VEC_MEM_ERR;
         }
         v->ptr = tmp;
@@ -54,7 +55,7 @@ enum vector_error vec_push(struct vector *v, void *x) {
 }
 
 
-enum vector_error vec_get(struct vector *v, void *x, size_t index) {
+enum vector_error vec_get(const struct vector *v, void *x, size_t index) {
     if (v->ptr == NULL) {
         return VEC_NULL_PTR;
     }
@@ -84,7 +85,7 @@ enum vector_error vec_pop(struct vector *v, void *x) {
 }
 
 
-void *vec_get_ptr(struct vector *v, size_t index) {
+void *vec_get_ptr(const struct vector *v, size_t index) {
     return (char*)v->ptr + (index * v->element_size);
 }
 
@@ -108,28 +109,28 @@ void vec_empty(struct vector *v) {
 
 
 
-void vec_inits(struct vector *v, size_t capacity, size_t element_size) {
+void vec_init_u(struct vector *v, size_t capacity, size_t element_size) {
     if (vec_init(v, capacity, element_size) != VEC_OK) {
         printf("fatal error.");
         exit(1);
     }
 }
 
-void vec_pushs(struct vector *v, void *x) {
+void vec_push_u(struct vector *v, void *x) {
     if (vec_push(v, x) != VEC_OK) {
         printf("fatal error.");
         exit(1);
     }
 }
 
-void vec_gets(struct vector *v, void *x, size_t index) {
+void vec_get_u(const struct vector *v, void *x, size_t index) {
     if (vec_get(v, x, index) != VEC_OK) {
         printf("fatal error.");
         exit(1);
     }
 }
 
-void vec_pops(struct vector *v, void *x) {
+void vec_pop_u(struct vector *v, void *x) {
     if (vec_push(v, x) != VEC_OK) {
         printf("fatal error.");
         exit(1);

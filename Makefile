@@ -1,7 +1,7 @@
 NAME=a.out
 
 CC      := clang
-CFLAGS  := -Wall -Wextra -O0 -MMD -MP -Isrc -std=c23 -pedantic-errors
+CFLAGS  := -Wall -Wextra -g -MMD -MP -Isrc -std=c23 -pedantic-errors
 
 SRC_DIR := src
 OBJ_DIR := build
@@ -21,6 +21,8 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 
 clean:
 	rm -rf $(OBJ_DIR) $(NAME)
+
+rebuild: clean $(NAME)
 
 
 

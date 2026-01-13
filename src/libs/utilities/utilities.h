@@ -1,4 +1,6 @@
 
+#ifndef __UTILITIES_HEADER__
+#define __UTILITIES_HEADER__
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,3 +18,5 @@ bool contains_str(const char **array, size_t n, const char *element);
 void *mallocs(size_t size);
 
 void asprintfs(char **restrict strp, const char *restrict fmt, ...);
+
+#endif

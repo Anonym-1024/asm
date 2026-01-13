@@ -1,6 +1,6 @@
 
-#ifndef __PARSER_HELPERS_HEADER
-#define __PARSER_HELPERS_HEADER
+#ifndef __PARSER_IMPL_HEADER
+#define __PARSER_IMPL_HEADER
 
 #include "parser.h"
 

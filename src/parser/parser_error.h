@@ -1,6 +1,6 @@
 
-#ifndef __PARSER_ERROR_HEADER
-#define __PARSER_ERROR_HEADER 
+#ifndef __PARSER_ERROR_HEADER__
+#define __PARSER_ERROR_HEADER__ 
 
 
 #include <stdlib.h>
