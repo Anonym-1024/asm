@@ -7,18 +7,18 @@
 
 
 struct parser_context {
-    const struct token *in;
+    const struct token *in; // Reference
     size_t n;
     size_t index;
 
     size_t line;
     size_t col;
 
-    char *error;
+    char *error; // Owned
 };
 
 
-void cst_node_deinit(void *node);
+
 
 enum parser_result parse_file(struct parser_context *ctx, struct cst_node *node);
 

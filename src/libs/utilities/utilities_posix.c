@@ -11,6 +11,7 @@
 off_t get_file_size(const char *path) {
     struct stat st;
     stat(path, &st);
+    
     return st.st_size;
 }
 
@@ -43,6 +44,19 @@ void asprintfs(char **strp, const char *fmt, ...)
     }
 
     va_end(args);
+}
+
+char *strdups(const char *s) {
+    char *ptr = strdup(s);
+    if (ptr == NULL) {
+        FATAL_ERR;
+    }
+    return ptr;
+}
+
+void ptr_move(void **src, void **dest) {
+    *dest = *src;
+    *src = NULL;
 }
 
 #endif

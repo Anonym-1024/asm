@@ -3,3 +3,4 @@ a.out
 compile_flags.txt
 *.s
 out.txt
+asm.code-workspace

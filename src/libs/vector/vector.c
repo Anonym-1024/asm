@@ -90,6 +90,9 @@ void *vec_get_ptr(const struct vector *v, size_t index) {
 }
 
 void vec_deinit(struct vector *v, void (*destructor)(void*)) {
+    if (v->ptr == NULL) {
+        return;
+    }
     if (destructor != NULL) {
         for (size_t i = 0; i < v->length; i++) {
             destructor(vec_get_ptr(v, i));

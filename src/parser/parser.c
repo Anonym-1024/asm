@@ -45,6 +45,17 @@ static const char *cst_node_kind_to_string(enum cst_node_kind kind) {
 }
 
 
+void cst_node_deinit(struct cst_node *node) {
+    if (node->kind == CST_TERMINAL) {
+        token_deinit(&node->terminal);
+    } else {
+        vec_deinit(&node->children, &_cst_node_deinit);
+    }
+}
+
+void _cst_node_deinit(void *node) {
+    cst_node_deinit(node);
+}
 
 void print_cst_node(FILE *f, struct cst_node *n, int indent) {
     if (!n) return;
@@ -55,7 +66,7 @@ void print_cst_node(FILE *f, struct cst_node *n, int indent) {
     fprintf(f, "%s", cst_node_kind_to_string(n->kind));
 
     if (n->kind == CST_TERMINAL) {
-        /* Adjust field name if your token differs */
+       
         fprintf(f, "'%s'", n->terminal.lexeme);
         fputc('\n', f);
     } else {

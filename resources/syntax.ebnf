@@ -30,3 +30,4 @@ loc_label_dist = "(", ?TOKEN_NUM?, ")";
 
 macro_stmt = ?TOKEN_MACRO?, [ condition_code ], args, "\n";
 loc_label_stmt = ".l", ?TOKEN_IDENT?, ":", "\n";
+

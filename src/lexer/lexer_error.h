@@ -8,6 +8,9 @@
 #include <string.h>
 #include <stdbool.h>
 
+#include "libs/utilities/utilities.h"
+
+
 
 enum lexer_error_kind {
     LEX_UNKNOWN_ERR,
@@ -20,12 +23,21 @@ enum lexer_error_kind {
     LEX_INV_NUM
 };
 
+
+
+
+
 struct lexer_error {
-    enum lexer_error_kind kind;
-    size_t line;
-    size_t col;
+    enum lexer_error_kind kind; 
+    size_t line; 
+    size_t col; 
 };
 
-char *lexer_error_desc(struct lexer_error *err);
+
+
+
+//! IN: err - ref
+//! OUT: out - mut ref
+int lexer_error_desc(struct lexer_error *err, char **out);
 
 #endif

@@ -31,7 +31,7 @@ enum ast_init_kind {
 struct ast_init {
     enum ast_init_kind kind;
     union {
-        num_lit_t num;
+        char *num;
         char *ascii;
         uint8_t *bytes;
     };
@@ -39,7 +39,7 @@ struct ast_init {
 
 
 struct ast_bytes_stmt {
-    num_lit_t length;
+    char *length;
     struct ast_init init;
 };
 
@@ -138,7 +138,7 @@ enum ast_sys_reg {
 struct ast_l_label {
     char *label;
     bool back;
-    num_lit_t dist;
+    char *dist;
 };
 
 struct ast_arg {
@@ -148,7 +148,7 @@ struct ast_arg {
         enum ast_addr_reg addr_reg;
         enum ast_sys_reg sys_reg;
         enum ast_port port;
-        num_lit_t imm;
+        char *imm;
         char *label;
         struct ast_l_label l_label;
     };
@@ -156,7 +156,20 @@ struct ast_arg {
 
 enum ast_condition_code {
     CC_AL,
-    /// TODO:
+    CC_EQ,
+    CC_MI,
+    CC_VS,
+    CC_SU,
+    CC_GU,
+    CC_SS,
+    CC_GS,
+    CC_NE,
+    CC_PL,
+    CC_VC,
+    CC_GEU,
+    CC_SEU,
+    CC_GES,
+    CC_SES
 };
 
 struct ast_instr_stmt {
@@ -202,7 +215,7 @@ struct ast_file {
 };
 
 
-void construct_ast(const struct cst_node *cnode, struct ast_file *ast);
+void build_ast(const struct cst_node *cnode, struct ast_file *ast);
 
 
 

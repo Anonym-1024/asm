@@ -6,51 +6,53 @@
 #include "libs/utilities/utilities.h"
 #include "parser/parser.h"
 #include <assert.h>
+#include "ast/ast.h"
 
 
 
 
 int main(void) {
-    FILE *f = fopen("resources/example.asm", "r");
+    FILE *f = fopen("resources/example copy.asm", "r");
 
     
 
-    off_t s = get_file_size("resources/example.asm");
+    off_t s = get_file_size("resources/example copy.asm");
 
     char *in = malloc(sizeof(char) * s);
     fread(in, sizeof(char), s, f);
 
     
     struct vector out;
-
+    
     struct lexer_error err;
 
     
-    fflush(stdout);
-    if (tokenise(in, s, &out, &err) == LEX_OK) {
+    enum lexer_result c = tokenise(in, s, &out, &err);
+    char *desc;
+
+    if (c == LEX_ERR) {
         
-        fflush(stdout);
-        /*for (size_t i = 0; i < out.length; i++) {
-            struct token t;
-            vec_get(&out, &t, i);
-            char *d;
-            token_desc(&t, &d);
-            printf("\033[32m%s\n", d);
-        }*/
-    } else {
-        printf("\033[31m%s", lexer_error_desc(&err));
-        return 0;
+        lexer_error_desc(&err, &desc);
+        printf("%s", desc);
+        free(in);
+   
+        fclose(f);
+        free(desc);
+
+
+    return 0;
+    }
+
+    for (size_t i = 0; i<out.length; i++) {
+        get_token_desc(vec_get_ptr(&out, i), &desc);
+        printf("%s\n", desc);
+        free(desc);
     }
     
-    struct cst_node j;
-    struct parser_error k;
-    enum parser_result r = parse(out.ptr, out.length, &j, &k);
-    
-    
-    if (r == PARSER_ERR) {
-        printf("\033[31m%s\n", parser_error_desc(&k));
-    } else {
-        print_cst_node(fopen("out.txt", "w"), &j, 0);
-    }
+
+    free(in);
+    vec_deinit(&out, &_token_deinit);
+    fclose(f);
+
     return 0;
 }

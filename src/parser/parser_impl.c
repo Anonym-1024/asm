@@ -1,6 +1,6 @@
 
-#include "parser.h"
-#include "parser_error.h"
+
+
 #include "parser_impl.h"
 #include "libs/utilities/utilities.h"
 
@@ -67,15 +67,7 @@ static struct cst_node make_terminal_node(struct parser_context *ctx) {
 
 
 
-void cst_node_deinit(void *node) {
-    struct cst_node *n = (struct cst_node*)node;
 
-    if (n->kind == CST_TERMINAL) {
-        free(n->terminal.lexeme);
-    } else {
-        vec_deinit(&n->children, &cst_node_deinit);
-    }
-}
 
 
 
@@ -122,8 +114,8 @@ enum parser_result parse_file(struct parser_context *ctx, struct cst_node *node)
     return PARSER_OK;
 
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -155,8 +147,8 @@ enum parser_result parse_sections(struct parser_context *ctx, struct cst_node *n
     return PARSER_OK;
 
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -193,8 +185,8 @@ enum parser_result parse_section(struct parser_context *ctx, struct cst_node *no
 
 
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -229,8 +221,8 @@ enum parser_result parse_data_section(struct parser_context *ctx, struct cst_nod
     node->kind = CST_DATA_SECTION;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -268,8 +260,8 @@ enum parser_result parse_data_dir(struct parser_context *ctx, struct cst_node *n
     node->kind = CST_DATA_DIR;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -302,8 +294,8 @@ enum parser_result parse_data_stmts(struct parser_context *ctx, struct cst_node 
     node->kind = CST_DATA_STMTS;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -342,8 +334,8 @@ enum parser_result parse_data_stmt(struct parser_context *ctx, struct cst_node *
     node->kind = CST_DATA_STMT;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -389,8 +381,8 @@ enum parser_result parse_byte_stmt(struct parser_context *ctx, struct cst_node *
     node->kind = CST_BYTE_STMT;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -455,8 +447,8 @@ enum parser_result parse_bytes_stmt(struct parser_context *ctx, struct cst_node 
     node->kind = CST_BYTES_STMT;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -495,8 +487,8 @@ enum parser_result parse_label_stmt(struct parser_context *ctx, struct cst_node 
     node->kind = CST_LABEL_STMT;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -527,8 +519,8 @@ enum parser_result parse_initializer(struct parser_context *ctx, struct cst_node
     node->kind = CST_INITIALIZER;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -571,8 +563,8 @@ enum parser_result parse_byte_initializer(struct parser_context *ctx, struct cst
     node->kind = CST_BYTE_INITIALIZER;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -613,8 +605,8 @@ enum parser_result parse_numbers(struct parser_context *ctx, struct cst_node *no
     node->kind = CST_NUMBERS;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -647,8 +639,8 @@ enum parser_result parse_exec_section(struct parser_context *ctx, struct cst_nod
     node->kind = CST_EXEC_SECTION;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -687,8 +679,8 @@ enum parser_result parse_exec_dir(struct parser_context *ctx, struct cst_node *n
     node->kind = CST_EXEC_DIR;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -722,8 +714,8 @@ enum parser_result parse_exec_stmts(struct parser_context *ctx, struct cst_node 
     node->kind = CST_EXEC_STMTS;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -766,8 +758,8 @@ enum parser_result parse_exec_stmt(struct parser_context *ctx, struct cst_node *
     node->kind = CST_EXEC_STMT;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -814,8 +806,8 @@ enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct cst
     node->kind = CST_INSTRUCTION_STMT;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -858,8 +850,8 @@ enum parser_result parse_condition_code(struct parser_context *ctx, struct cst_n
     node->kind = CST_CONDITION_CODE;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -915,8 +907,8 @@ enum parser_result parse_args(struct parser_context *ctx, struct cst_node *node)
     node->kind = CST_ARGS;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -959,8 +951,8 @@ enum parser_result parse_arg(struct parser_context *ctx, struct cst_node *node) 
     node->kind = CST_ARG;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -993,8 +985,8 @@ enum parser_result parse_immediate(struct parser_context *ctx, struct cst_node *
     node->kind = CST_IMMEDIATE;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -1019,8 +1011,8 @@ enum parser_result parse_label(struct parser_context *ctx, struct cst_node *node
     node->kind = CST_LABEL;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -1064,8 +1056,8 @@ enum parser_result parse_loc_label(struct parser_context *ctx, struct cst_node *
     node->kind = CST_LOC_LABEL;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -1090,8 +1082,8 @@ enum parser_result parse_direction_dir(struct parser_context *ctx, struct cst_no
     node->kind = CST_DIRECTION_DIR;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -1133,8 +1125,8 @@ enum parser_result parse_loc_label_dist(struct parser_context *ctx, struct cst_n
     node->kind = CST_LOC_LABEL_DIST;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -1182,8 +1174,8 @@ enum parser_result parse_macro_stmt(struct parser_context *ctx, struct cst_node 
     node->kind = CST_MACRO_STMT;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
@@ -1231,8 +1223,8 @@ enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct cst_n
     node->kind = CST_LOC_LABEL_STMT;
     return PARSER_OK;
 
-    _error:
-    vec_deinit(&children, &cst_node_deinit);
+_error:
+    vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }

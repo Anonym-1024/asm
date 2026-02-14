@@ -7,10 +7,14 @@
 #include <string.h>
 #include <stdbool.h>
 
+#include "libs/utilities/utilities.h"
+
 
 
 #include "lexer_error.h"
 #include "libs/vector/vector.h"
+
+
 
 enum token_kind {
     TOKEN_DIR,
@@ -29,12 +33,18 @@ enum token_kind {
     TOKEN_EOF
 };
 
+
+
+
 struct token {
     enum token_kind kind;
-    char *lexeme;
-    size_t line;
+    char *lexeme; //! Owned
+    size_t line; 
     size_t col;
 };
+
+void token_deinit(struct token *ptr);
+void _token_deinit(void *ptr);
 
 enum lexer_result {
     LEX_OK,
@@ -42,7 +52,7 @@ enum lexer_result {
 };
 
 
-void token_desc(struct token *t, char **out);
+int get_token_desc(struct token *t, char **out);
 
 
 enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct lexer_error *error);

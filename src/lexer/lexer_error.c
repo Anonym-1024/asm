@@ -3,9 +3,9 @@
 #include "libs/utilities/utilities.h"
 
 
-char *lexer_error_desc(struct lexer_error *err) {
+int lexer_error_desc(struct lexer_error *err, char **desc) {
 
-    const char *msg;
+    const char *msg = NULL;
 
     switch (err->kind) {
         case LEX_UNKNOWN_ERR:
@@ -41,9 +41,17 @@ char *lexer_error_desc(struct lexer_error *err) {
         break;
     }
 
-    char *out;
-    asprintfs(&out, "LEXER ERROR [%ld:%ld]: %s", err->line, err->col, msg);
+    *desc = NULL;
+    if (asprintf(desc, "LEXER ERROR [%ld:%ld]: %s", err->line, err->col, msg) == -1) {
+        goto _error;
+    }
 
-    return out;
+    return 0;
+
+
+_error:
+    
+    free(*desc);
+    return -1;
     
 }

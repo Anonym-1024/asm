@@ -54,9 +54,12 @@ enum cst_node_kind {
 struct cst_node {
     enum cst_node_kind kind;
 
-    struct token terminal;
-    struct vector children;
+    struct token terminal; //! Owned
+    struct vector children; //! Owned
 };
+
+void cst_node_deinit(struct cst_node *node);
+void _cst_node_deinit(void *node);
 
 
 void print_cst_node(FILE *f, struct cst_node *n, int indent);
