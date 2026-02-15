@@ -505,6 +505,7 @@ enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct 
 
 _error:
     
+    *out = null_vector();
     vec_deinit(&ctx.buffer, NULL);
     vec_deinit(&ctx.out, &_token_deinit);
     error->line = ctx.line;

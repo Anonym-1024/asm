@@ -21,15 +21,19 @@ static bool is_matching_lexeme(struct parser_context *ctx, int offset, const cha
         return false;
     }
     
-    fflush(stdout);
     return strcmp(ctx->in[index].lexeme, lexeme) == 0;
 }
 
-static void pop_token(struct parser_context *ctx, struct token *t) {
+/// Pops a copy of current token
+static enum parser_result pop_token(struct parser_context *ctx, struct token *t) {
     *t = ctx->in[ctx->index];
-    t->lexeme = mallocs(strlen(t->lexeme) * sizeof(char) + 1);
+    t->lexeme = malloc(strlen(t->lexeme) * sizeof(char) + 1);
+    if (t->lexeme == NULL) {
+        return PARSER_ERR;
+    }
     strcpy(t->lexeme, ctx->in[ctx->index].lexeme);
     ctx->index += 1;
+    return PARSER_OK;
 }
 
 static const char *current_token_lexeme(struct parser_context *ctx) {
@@ -58,17 +62,25 @@ static bool is_line_terminated(struct parser_context *ctx) {
 
 
 
-static struct cst_node make_terminal_node(struct parser_context *ctx) {
-    struct cst_node node;
-    node.kind = CST_TERMINAL;
-    pop_token(ctx, &node.terminal);
-    return node;
+static enum parser_result make_terminal_node(struct parser_context *ctx, struct cst_node *node) {
+    node->kind = CST_TERMINAL;
+    try_else(pop_token(ctx, &node->terminal), PARSER_OK, goto _error);
+    return PARSER_OK;
+
+    _error:
+    return PARSER_ERR;
 }
 
 
 
 
-
+static struct cst_node null_cst_node() {
+    struct cst_node n;
+    n.children.ptr = NULL;
+    n.terminal.lexeme = NULL;
+    n.kind = CST_TERMINAL;
+    return n;
+}
 
 
 
@@ -80,9 +92,12 @@ static struct cst_node make_terminal_node(struct parser_context *ctx) {
 
 
 enum parser_result parse_file(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+
+    struct cst_node sections_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
+    
 
     // BODY
 
@@ -90,12 +105,12 @@ enum parser_result parse_file(struct parser_context *ctx, struct cst_node *node)
         ctx->index += 1;
     }
 
-    struct cst_node sections_node;
-    res = parse_sections(ctx, &sections_node);
-    if (res == PARSER_ERR) {
-        goto _error;
-    }
-    vec_push_u(&children, &sections_node);
+    
+    try_else(parse_sections(ctx, &sections_node), PARSER_OK, goto _error);
+    
+    try_else(vec_push(&children, &sections_node), VEC_OK, goto _error);
+    sections_node = null_cst_node();
+
 
 
     while (is_matching_lexeme(ctx, 0, "\n")) {
@@ -103,10 +118,13 @@ enum parser_result parse_file(struct parser_context *ctx, struct cst_node *node)
     }
 
     if (!is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintfs(&ctx->error, "Expected end of file ");
+        if (asprintf(&ctx->error, "Expected end of file ") == -1) {
+            free(ctx->error);
+        }
         goto _error;
     }
 
+    
 
 
     node->children = children;
@@ -115,6 +133,7 @@ enum parser_result parse_file(struct parser_context *ctx, struct cst_node *node)
 
 
 _error:
+    cst_node_deinit(&sections_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -126,19 +145,22 @@ bool follows_section(struct parser_context *ctx) {
 }
 
 enum parser_result parse_sections(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node section_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
-    struct cst_node section_node;
+    
     while (follows_section(ctx)) {
-        res = parse_section(ctx, &section_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_section(ctx, &section_node), PARSER_OK, goto _error);
+        
         vec_push_u(&children, &section_node);
+        section_node = null_cst_node();
     }
     
     
@@ -148,6 +170,7 @@ enum parser_result parse_sections(struct parser_context *ctx, struct cst_node *n
 
 
 _error:
+    cst_node_deinit(&section_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -155,29 +178,30 @@ _error:
 
 
 enum parser_result parse_section(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node child_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
 
-    struct cst_node child_node;
+    
     if (is_matching_lexeme(ctx, 0, ".DATA")) {
-        res = parse_data_section(ctx, &child_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_data_section(ctx, &child_node), PARSER_OK, goto _error);
+        
         
 
     } else {
-        res = parse_exec_section(ctx, &child_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_exec_section(ctx, &child_node), PARSER_OK, goto _error);
+        
         
     }
     vec_push_u(&children, &child_node);
+    child_node = null_cst_node();
     
     node->children = children;
     node->kind = CST_SECTION;
@@ -186,6 +210,7 @@ enum parser_result parse_section(struct parser_context *ctx, struct cst_node *no
 
 
 _error:
+    cst_node_deinit(&child_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -193,26 +218,29 @@ _error:
 
 
 enum parser_result parse_data_section(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node data_dir_node = null_cst_node();
+    struct cst_node data_stmts_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
-    struct cst_node data_dir_node;
-    res = parse_data_dir(ctx, &data_dir_node);
-    if (res == PARSER_ERR) {
-        goto _error;
-    }
+    
+    try_else(parse_data_dir(ctx, &data_dir_node), PARSER_OK, goto _error);
+    
     vec_push_u(&children, &data_dir_node);
+    data_dir_node = null_cst_node();
 
 
-    struct cst_node data_stmts_node;
-    res = parse_data_stmts(ctx, &data_stmts_node);
-    if (res == PARSER_ERR) {
-        goto _error;
-    }
+    
+    try_else(parse_data_stmts(ctx, &data_stmts_node), PARSER_OK, goto _error);
+    
     vec_push_u(&children, &data_stmts_node);
+    data_stmts_node = null_cst_node();
 
 
 
@@ -222,6 +250,8 @@ enum parser_result parse_data_section(struct parser_context *ctx, struct cst_nod
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&data_dir_node);
+    cst_node_deinit(&data_stmts_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -229,30 +259,35 @@ _error:
 
 
 enum parser_result parse_data_dir(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
+    struct vector children = null_vector();
     
+    
+    struct cst_node data_node = null_cst_node();
+    struct cst_node colon_node = null_cst_node();
 
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
     // BODY
 
     if (!is_matching_lexeme(ctx, 0, ".DATA")) {
-        asprintfs(&ctx->error, "Expected '.DATA', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected '.DATA', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node data_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &data_node), PARSER_OK, goto _error);
     vec_push_u(&children, &data_node);
+    data_node = null_cst_node();
 
 
     if (!is_matching_lexeme(ctx, 0, ":")) {
-        asprintfs(&ctx->error, "Expected ':', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected ':', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node colon_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &colon_node), PARSER_OK, goto _error);
     vec_push_u(&children, &colon_node);
+    colon_node = null_cst_node();
 
 
     if (!is_line_terminated(ctx)) {
-        asprintfs(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
     
@@ -261,6 +296,8 @@ enum parser_result parse_data_dir(struct parser_context *ctx, struct cst_node *n
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&data_node);
+    cst_node_deinit(&colon_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -273,19 +310,22 @@ static bool follows_data_stmt(struct parser_context *ctx) {
 }
 
 enum parser_result parse_data_stmts(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node data_stmt_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
-    struct cst_node data_stmt_node;
+   
     while (follows_data_stmt(ctx)) {
-        res = parse_data_stmt(ctx, &data_stmt_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_data_stmt(ctx, &data_stmt_node), PARSER_OK, goto _error);
+        
         vec_push_u(&children, &data_stmt_node);
+        data_stmt_node = null_cst_node();
     }
 
     
@@ -295,6 +335,7 @@ enum parser_result parse_data_stmts(struct parser_context *ctx, struct cst_node 
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&data_stmt_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -302,39 +343,39 @@ _error:
 
 
 enum parser_result parse_data_stmt(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node child_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
-    struct cst_node child_node;
+    
     if (is_matching_lexeme(ctx, 0, "byte")) {
-        res = parse_byte_stmt(ctx, &child_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_byte_stmt(ctx, &child_node), PARSER_OK, goto _error);
+        
         
     } else if (is_matching_lexeme(ctx, 0, "bytes")) {
-        res = parse_bytes_stmt(ctx, &child_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_bytes_stmt(ctx, &child_node), PARSER_OK, goto _error);
+        
         
     } else {
-        res = parse_label_stmt(ctx, &child_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_label_stmt(ctx, &child_node), PARSER_OK, goto _error);
+        
         
     }
     vec_push_u(&children, &child_node);
+    child_node = null_cst_node();
 
     node->children = children;
     node->kind = CST_DATA_STMT;
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&child_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -348,31 +389,35 @@ bool follows_initializer(struct parser_context *ctx) {
 }
 
 enum parser_result parse_byte_stmt(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
 
+    struct cst_node byte_node = null_cst_node();
+    struct cst_node initializer_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
     // BODY
 
     if (!is_matching_lexeme(ctx, 0, "byte")) {
-        asprintfs(&ctx->error, "Expected 'byte', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected 'byte', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node byte_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &byte_node), PARSER_OK, goto _error);
     vec_push_u(&children, &byte_node);
+    byte_node = null_cst_node();
 
 
     if (follows_initializer(ctx)) {
-        struct cst_node initializer_node;
-        res = parse_initializer(ctx, &initializer_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        
+        try_else(parse_initializer(ctx, &initializer_node), PARSER_OK, goto _error);
+        
         vec_push_u(&children, &initializer_node);
+        initializer_node = null_cst_node();
     }
 
     if (!is_line_terminated(ctx)) {
-        asprintfs(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
     
@@ -382,6 +427,8 @@ enum parser_result parse_byte_stmt(struct parser_context *ctx, struct cst_node *
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&byte_node);
+    cst_node_deinit(&initializer_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -389,56 +436,66 @@ _error:
 
 
 enum parser_result parse_bytes_stmt(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node byte_node = null_cst_node();
+    struct cst_node lpar_node = null_cst_node();
+    struct cst_node num_node = null_cst_node();
+    struct cst_node rpar_node = null_cst_node();
+    struct cst_node initializer_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
 
     if (!is_matching_lexeme(ctx, 0, "bytes")) {
-        asprintfs(&ctx->error, "Expected 'bytes', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected 'bytes', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node byte_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &byte_node), PARSER_OK, goto _error);
     vec_push_u(&children, &byte_node);
+    byte_node = null_cst_node();
 
 
     if (!is_matching_lexeme(ctx, 0, "(")) {
-        asprintfs(&ctx->error, "Expected '(', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected '(', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node lpar_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &lpar_node), PARSER_OK, goto _error);
     vec_push_u(&children, &lpar_node);
+    lpar_node = null_cst_node();
 
 
     if (!is_matching_kind(ctx, 0, TOKEN_NUM)) {
-        asprintfs(&ctx->error, "Expected number literal, found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected number literal, found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node num_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &num_node), PARSER_OK, goto _error);
     vec_push_u(&children, &num_node);
+    num_node = null_cst_node();
 
 
     if (!is_matching_lexeme(ctx, 0, ")")) {
-        asprintfs(&ctx->error, "Expected ')', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected ')', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node rpar_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &rpar_node), PARSER_OK, goto _error);
     vec_push_u(&children, &rpar_node);
+    rpar_node = null_cst_node();
 
 
     if (follows_initializer(ctx)) {
-        struct cst_node initializer_node;
-        res = parse_initializer(ctx, &initializer_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_initializer(ctx, &initializer_node), PARSER_OK, goto _error);
+        
         vec_push_u(&children, &initializer_node);
+        initializer_node = null_cst_node();
     }
 
     if (!is_line_terminated(ctx)) {
-        asprintfs(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
     
@@ -448,6 +505,11 @@ enum parser_result parse_bytes_stmt(struct parser_context *ctx, struct cst_node 
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&byte_node);
+    cst_node_deinit(&initializer_node);
+    cst_node_deinit(&lpar_node);
+    cst_node_deinit(&num_node);
+    cst_node_deinit(&rpar_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -455,31 +517,37 @@ _error:
 
 
 enum parser_result parse_label_stmt(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
+    struct vector children = null_vector();
     
+    
+    struct cst_node ident_node = null_cst_node();
+    struct cst_node colon_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
     
     if (!is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        asprintfs(&ctx->error, "Expected identifier, found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected identifier, found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node ident_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &ident_node), PARSER_OK, goto _error);
     vec_push_u(&children, &ident_node);
+    ident_node = null_cst_node();
 
 
     if (!is_matching_lexeme(ctx, 0, ":")) {
-        asprintfs(&ctx->error, "Expected ':', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected ':', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node colon_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &colon_node), PARSER_OK, goto _error);
     vec_push_u(&children, &colon_node);
+    colon_node = null_cst_node();
 
 
     if (!is_line_terminated(ctx)) {
-        asprintfs(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
 
@@ -488,6 +556,8 @@ enum parser_result parse_label_stmt(struct parser_context *ctx, struct cst_node 
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&colon_node);
+    cst_node_deinit(&ident_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -495,31 +565,35 @@ _error:
 
 
 enum parser_result parse_initializer(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node child_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
-    struct cst_node child_node;
+    
     if (is_matching_kind(ctx, 0, TOKEN_NUM)) {
-        child_node = make_terminal_node(ctx);
+        try_else(make_terminal_node(ctx, &child_node), PARSER_OK, goto _error);
     } else if (is_matching_kind(ctx, 0, TOKEN_ASCII)) {
-        child_node = make_terminal_node(ctx);
+        try_else(make_terminal_node(ctx, &child_node), PARSER_OK, goto _error);
     } else {
-        res = parse_byte_initializer(ctx, &child_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_byte_initializer(ctx, &child_node), PARSER_OK, goto _error);
+        
     }
 
     vec_push_u(&children, &child_node);
+    child_node = null_cst_node();
 
     node->children = children;
     node->kind = CST_INITIALIZER;
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&child_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -527,35 +601,42 @@ _error:
 
 
 enum parser_result parse_byte_initializer(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node lpar_node = null_cst_node();
+    struct cst_node numbers_node = null_cst_node();
+    struct cst_node rpar_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
 
     if (!is_matching_lexeme(ctx, 0, "{")) {
-        asprintfs(&ctx->error, "Expected '{', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected '{', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node lpar_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &lpar_node), PARSER_OK, goto _error);
     vec_push_u(&children, &lpar_node);
+    lpar_node = null_cst_node();
 
 
-    struct cst_node numbers_node;
-    res = parse_numbers(ctx, &numbers_node);
-    if (res == PARSER_ERR) {
-        goto _error;
-    }
+    
+    try_else(parse_numbers(ctx, &numbers_node), PARSER_OK, goto _error);
+    
     vec_push_u(&children, &numbers_node);
+    numbers_node = null_cst_node();
 
 
     if (!is_matching_lexeme(ctx, 0, "}")) {
-        asprintfs(&ctx->error, "Expected '}', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected '}', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node rpar_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &rpar_node), PARSER_OK, goto _error);
     vec_push_u(&children, &rpar_node);
+    rpar_node = null_cst_node();
 
     
 
@@ -564,6 +645,9 @@ enum parser_result parse_byte_initializer(struct parser_context *ctx, struct cst
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&lpar_node);
+    cst_node_deinit(&numbers_node);
+    cst_node_deinit(&numbers_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -571,10 +655,13 @@ _error:
 
 
 enum parser_result parse_numbers(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
+    struct vector children = null_vector();
+    
     
 
+    struct cst_node number_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
     // BODY
 
     if (!is_matching_kind(ctx, 0, TOKEN_NUM)) {
@@ -583,22 +670,25 @@ enum parser_result parse_numbers(struct parser_context *ctx, struct cst_node *no
         return PARSER_OK;
     }
 
-    struct cst_node number_node;
-    number_node = make_terminal_node(ctx);
+    
+    try_else(make_terminal_node(ctx, &number_node), PARSER_OK, goto _error);
     vec_push_u(&children, &number_node);
+    number_node = null_cst_node();
 
     
     while (is_matching_lexeme(ctx, 0, ",")) {
-        number_node = make_terminal_node(ctx);
+        try_else(make_terminal_node(ctx, &number_node), PARSER_OK, goto _error);
         vec_push_u(&children, &number_node); 
+        number_node = null_cst_node();
 
         if (!is_matching_kind(ctx, 0, TOKEN_NUM)) {
-            asprintfs(&ctx->error, "Expected number literal, found '%s' instead.", current_token_lexeme(ctx));
+            if (asprintf(&ctx->error, "Expected number literal, found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
             goto _error;
         }
 
-        number_node = make_terminal_node(ctx);
-        vec_push_u(&children, &number_node); 
+        try_else(make_terminal_node(ctx, &number_node), PARSER_OK, goto _error);
+        vec_push_u(&children, &number_node);
+        number_node = null_cst_node(); 
     }
 
     node->children = children;
@@ -606,6 +696,7 @@ enum parser_result parse_numbers(struct parser_context *ctx, struct cst_node *no
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&number_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -613,26 +704,28 @@ _error:
 
 
 enum parser_result parse_exec_section(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node exec_dir_node = null_cst_node();
+    struct cst_node exec_stmts_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
-    struct cst_node exec_dir_node;
-    res = parse_exec_dir(ctx, &exec_dir_node);
-    if (res == PARSER_ERR) {
-        goto _error;
-    }
+    
+    try_else(parse_exec_dir(ctx, &exec_dir_node), PARSER_OK, goto _error);
     vec_push_u(&children, &exec_dir_node);
+    exec_dir_node = null_cst_node();
 
 
-    struct cst_node exec_stmts_node;
-    res = parse_exec_stmts(ctx, &exec_stmts_node);
-    if (res == PARSER_ERR) {
-        goto _error;
-    }
+    
+    try_else(parse_exec_stmts(ctx, &exec_stmts_node), PARSER_OK, goto _error);
+    
     vec_push_u(&children, &exec_stmts_node);
+    exec_stmts_node = null_cst_node();
     
 
     node->children = children;
@@ -640,6 +733,8 @@ enum parser_result parse_exec_section(struct parser_context *ctx, struct cst_nod
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&exec_dir_node);
+    cst_node_deinit(&exec_stmts_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -647,31 +742,37 @@ _error:
 
 
 enum parser_result parse_exec_dir(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
+    struct vector children = null_vector();
+    
     
 
+    struct cst_node data_node = null_cst_node();
+    struct cst_node colon_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
     // BODY
 
     
     if (!is_matching_lexeme(ctx, 0, ".EXEC")) {
-        asprintfs(&ctx->error, "Expected '.EXEC', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected '.EXEC', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node data_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &data_node), PARSER_OK, goto _error);
     vec_push_u(&children, &data_node);
+    data_node = null_cst_node();
 
 
     if (!is_matching_lexeme(ctx, 0, ":")) {
-        asprintfs(&ctx->error, "Expected ':', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected ':', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node colon_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &colon_node), PARSER_OK, goto _error);
     vec_push_u(&children, &colon_node);
+    colon_node = null_cst_node();
 
 
     if (!is_line_terminated(ctx)) {
-        asprintfs(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
 
@@ -680,6 +781,8 @@ enum parser_result parse_exec_dir(struct parser_context *ctx, struct cst_node *n
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&data_node);
+    cst_node_deinit(&colon_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -694,20 +797,23 @@ bool follows_exec_stmt(struct parser_context *ctx) {
 }
 
 enum parser_result parse_exec_stmts(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node exec_stmt_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
     
-    struct cst_node exec_stmt_node;
+    
     while (follows_exec_stmt(ctx)) {
-        res = parse_exec_stmt(ctx, &exec_stmt_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_exec_stmt(ctx, &exec_stmt_node), PARSER_OK, goto _error);
+        
         vec_push_u(&children, &exec_stmt_node);
+        exec_stmt_node = null_cst_node();
     }
 
     node->children = children;
@@ -715,6 +821,7 @@ enum parser_result parse_exec_stmts(struct parser_context *ctx, struct cst_node 
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&exec_stmt_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -722,36 +829,35 @@ _error:
 
 
 enum parser_result parse_exec_stmt(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node child_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
     
-    struct cst_node child_node;
+    
     if (is_matching_kind(ctx, 0, TOKEN_INSTR)) {
-        res = parse_instruction_stmt(ctx, &child_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_instruction_stmt(ctx, &child_node), PARSER_OK, goto _error);
+        
+        
     } else if (is_matching_kind(ctx, 0, TOKEN_MACRO)) {
-        res = parse_macro_stmt(ctx, &child_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_macro_stmt(ctx, &child_node), PARSER_OK, goto _error);
+        
+        
     } else if (is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        res = parse_label_stmt(ctx, &child_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_label_stmt(ctx, &child_node), PARSER_OK, goto _error);
+        
     } else {
-        res = parse_loc_label_stmt(ctx, &child_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_loc_label_stmt(ctx, &child_node), PARSER_OK, goto _error);
+        
     }
     vec_push_u(&children, &child_node);
+    child_node = null_cst_node();
 
 
     node->children = children;
@@ -759,6 +865,7 @@ enum parser_result parse_exec_stmt(struct parser_context *ctx, struct cst_node *
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&child_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -766,39 +873,43 @@ _error:
 
 
 enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
 
+    struct cst_node instr_node = null_cst_node();
+    struct cst_node cond_code_node = null_cst_node();
+    struct cst_node args_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
     // BODY
 
     if (!is_matching_kind(ctx, 0, TOKEN_INSTR)) {
-        asprintfs(&ctx->error, "Expected instruction, found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected instruction, found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node instr_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &instr_node), PARSER_OK, goto _error);
     vec_push_u(&children, &instr_node);
+    instr_node = null_cst_node();
 
     if (is_matching_lexeme(ctx, 0, "(")) {
-        struct cst_node cond_code_node;
-        res = parse_condition_code(ctx, &cond_code_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+       
+        try_else(parse_condition_code(ctx, &cond_code_node), PARSER_OK, goto _error);
+        
         vec_push_u(&children, &cond_code_node);
+        cond_code_node = null_cst_node();
     }
 
 
-    struct cst_node args_node;
-    res = parse_args(ctx, &args_node);
-    if (res == PARSER_ERR) {
-        goto _error;
-    }
+    
+    try_else(parse_args(ctx, &args_node), PARSER_OK, goto _error);
+    
     vec_push_u(&children, &args_node);
+    args_node = null_cst_node();
 
 
     if (!is_line_terminated(ctx)) {
-        asprintfs(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
 
@@ -807,6 +918,9 @@ enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct cst
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&instr_node);
+    cst_node_deinit(&args_node);
+    cst_node_deinit(&cond_code_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -814,36 +928,44 @@ _error:
 
 
 enum parser_result parse_condition_code(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
+    struct vector children = null_vector();
+    
     
 
+    struct cst_node lpar_node = null_cst_node();
+    struct cst_node cond_code_node = null_cst_node();
+    struct cst_node rpar_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
     // BODY
 
 
     if (!is_matching_lexeme(ctx, 0, "(")) {
-        asprintfs(&ctx->error, "Expected '(', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected '(', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node lpar_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &lpar_node), PARSER_OK, goto _error);
     vec_push_u(&children, &lpar_node);
+    lpar_node = null_cst_node();
 
 
 
     if (!is_matching_kind(ctx, 0, TOKEN_COND_CODE)) {
-        asprintfs(&ctx->error, "Expected condition code, found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected condition code, found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node cond_code_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &cond_code_node), PARSER_OK, goto _error);
     vec_push_u(&children, &cond_code_node);
+    cond_code_node = null_cst_node();
 
 
     if (!is_matching_lexeme(ctx, 0, ")")) {
-        asprintfs(&ctx->error, "Expected ')', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected ')', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node rpar_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &rpar_node), PARSER_OK, goto _error);
     vec_push_u(&children, &rpar_node);
+    rpar_node = null_cst_node();
     
 
     node->children = children;
@@ -851,6 +973,9 @@ enum parser_result parse_condition_code(struct parser_context *ctx, struct cst_n
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&lpar_node);
+    cst_node_deinit(&cond_code_node);
+    cst_node_deinit(&rpar_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -870,36 +995,39 @@ bool follows_arg(struct parser_context *ctx) {
 }
 
 enum parser_result parse_args(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node arg_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
 
 
-    struct cst_node arg_node;
+    
     if (!follows_arg(ctx)) {
         node->children = children;
         node->kind = CST_ARGS;
         return PARSER_OK;
     }
-    res = parse_arg(ctx, &arg_node);
-    if (res == PARSER_ERR) {
-        goto _error;
-    }
+    try_else(parse_arg(ctx, &arg_node), PARSER_OK, goto _error);
+    
     vec_push_u(&children, &arg_node);
+    arg_node = null_cst_node();
 
     while (is_matching_lexeme(ctx, 0, ",")) {
-        arg_node = make_terminal_node(ctx);
+        try_else(make_terminal_node(ctx, &arg_node), PARSER_OK, goto _error);
         vec_push_u(&children, &arg_node);
+        arg_node = null_cst_node();
 
        
-        res = parse_arg(ctx, &arg_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_arg(ctx, &arg_node), PARSER_OK, goto _error);
+        
         vec_push_u(&children, &arg_node);
+        arg_node = null_cst_node();
     }
     
 
@@ -908,6 +1036,7 @@ enum parser_result parse_args(struct parser_context *ctx, struct cst_node *node)
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&arg_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -915,36 +1044,35 @@ _error:
 
 
 enum parser_result parse_arg(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node child_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
-    struct cst_node child_node;
+    
     if (is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        res = parse_label(ctx, &child_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_label(ctx, &child_node), PARSER_OK, goto _error);
+        
         
     } else if (is_matching_lexeme(ctx, 0, "#")) {
-        res = parse_immediate(ctx, &child_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_immediate(ctx, &child_node), PARSER_OK, goto _error);
+        
     } else if (is_matching_lexeme(ctx, 0, ".f") || is_matching_lexeme(ctx, 0, ".b")) {
-        res = parse_loc_label(ctx, &child_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_loc_label(ctx, &child_node), PARSER_OK, goto _error);
+        
     } else if (follows_arg(ctx)) {
-        child_node = make_terminal_node(ctx);
+       try_else(make_terminal_node(ctx, &child_node), PARSER_OK, goto _error);
     } else {
-        asprintfs(&ctx->error, "Expected argument, found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected argument, found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
     vec_push_u(&children, &child_node);
+    child_node = null_cst_node();
 
 
     node->children = children;
@@ -952,6 +1080,7 @@ enum parser_result parse_arg(struct parser_context *ctx, struct cst_node *node) 
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&child_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -959,26 +1088,32 @@ _error:
 
 
 enum parser_result parse_immediate(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
+    struct vector children = null_vector();
     
+    
+    struct cst_node hash_node = null_cst_node();
+    struct cst_node num_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
     if (!is_matching_lexeme(ctx, 0, "#")) {
-        asprintfs(&ctx->error, "Expected '#', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected '#', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node hash_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &hash_node), PARSER_OK, goto _error);
     vec_push_u(&children, &hash_node);
+    hash_node = null_cst_node();
 
 
     if (!is_matching_kind(ctx, 0, TOKEN_NUM)) {
-        asprintfs(&ctx->error, "Expected number literal, found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected number literal, found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node num_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &num_node), PARSER_OK, goto _error);
     vec_push_u(&children, &num_node);
+    num_node = null_cst_node();
 
 
     node->children = children;
@@ -986,6 +1121,8 @@ enum parser_result parse_immediate(struct parser_context *ctx, struct cst_node *
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&hash_node);
+    cst_node_deinit(&num_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -993,25 +1130,30 @@ _error:
 
 
 enum parser_result parse_label(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
+    struct vector children = null_vector();
+    
    
+    struct cst_node ident_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
     
     if (!is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        asprintfs(&ctx->error, "Expected identifier, found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected identifier, found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node ident_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &ident_node), PARSER_OK, goto _error);
     vec_push_u(&children, &ident_node);
+    ident_node = null_cst_node();
 
     node->children = children;
     node->kind = CST_LABEL;
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&ident_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
@@ -1021,35 +1163,41 @@ _error:
 
 
 enum parser_result parse_loc_label(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node direction_node = null_cst_node();
+    struct cst_node dist_node = null_cst_node();
+    struct cst_node ident_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
-    struct cst_node direction_node;
-    res = parse_direction_dir(ctx, &direction_node);
-    if (res == PARSER_ERR) {
-        goto _error;
-    }
+    
+    try_else(parse_direction_dir(ctx, &direction_node), PARSER_OK, goto _error);
+    
     vec_push_u(&children, &direction_node);
+    direction_node = null_cst_node();
+
 
     if (is_matching_lexeme(ctx, 0, "(")) {
-        struct cst_node dist_node;
-        res = parse_loc_label_dist(ctx, &dist_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        
+        try_else(parse_loc_label_dist(ctx, &dist_node), PARSER_OK, goto _error);
+        
         vec_push_u(&children, &dist_node);
+        dist_node = null_cst_node();
     }
 
 
     if (!is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        asprintfs(&ctx->error, "Expected identifier, found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected identifier, found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node ident_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &ident_node), PARSER_OK, goto _error);
     vec_push_u(&children, &ident_node);
+    ident_node = null_cst_node();
 
 
     node->children = children;
@@ -1057,25 +1205,32 @@ enum parser_result parse_loc_label(struct parser_context *ctx, struct cst_node *
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&direction_node);
+    cst_node_deinit(&dist_node);
+    cst_node_deinit(&ident_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
 
 enum parser_result parse_direction_dir(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
+    struct vector children = null_vector();
     
+    
+    struct cst_node dir_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
     
     if (!is_matching_lexeme(ctx, 0, ".f") && !is_matching_lexeme(ctx, 0, ".b")) {
-        asprintfs(&ctx->error, "Expected '.f' or '.b', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected '.f' or '.b', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node dir_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &dir_node), PARSER_OK, goto _error);
     vec_push_u(&children, &dir_node);
+    dir_node = null_cst_node();
 
 
     node->children = children;
@@ -1083,42 +1238,51 @@ enum parser_result parse_direction_dir(struct parser_context *ctx, struct cst_no
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&dir_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
 
 enum parser_result parse_loc_label_dist(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
+    struct vector children = null_vector();
     
+    
+    struct cst_node lpar_node = null_cst_node();
+    struct cst_node num_node = null_cst_node();
+    struct cst_node rpar_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
     
     if (!is_matching_lexeme(ctx, 0, "(")) {
-        asprintfs(&ctx->error, "Expected '(', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected '(', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node lpar_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &lpar_node), PARSER_OK, goto _error);
     vec_push_u(&children, &lpar_node);
+    lpar_node = null_cst_node();
 
 
 
     if (!is_matching_kind(ctx, 0, TOKEN_NUM)) {
-        asprintfs(&ctx->error, "Expected condition code, found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected condition code, found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node num_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &num_node), PARSER_OK, goto _error);
     vec_push_u(&children, &num_node);
+    num_node = null_cst_node();
 
 
     if (!is_matching_lexeme(ctx, 0, ")")) {
-        asprintfs(&ctx->error, "Expected ')', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected ')', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node rpar_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &rpar_node), PARSER_OK, goto _error);
     vec_push_u(&children, &rpar_node);
+    rpar_node = null_cst_node();
 
 
     node->children = children;
@@ -1126,46 +1290,53 @@ enum parser_result parse_loc_label_dist(struct parser_context *ctx, struct cst_n
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&lpar_node);
+    cst_node_deinit(&num_node);
+    cst_node_deinit(&rpar_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
 
 enum parser_result parse_macro_stmt(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
-    enum parser_result res;
+    struct vector children = null_vector();
+    
+    
+
+    struct cst_node macro_node = null_cst_node();
+    struct cst_node cond_code_node = null_cst_node();
+    struct cst_node args_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
     
     if (!is_matching_kind(ctx, 0, TOKEN_MACRO)) {
-        asprintfs(&ctx->error, "Expected macro, found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected macro, found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node macro_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &macro_node), PARSER_OK, goto _error);
     vec_push_u(&children, &macro_node);
+    macro_node = null_cst_node();
 
     if (is_matching_lexeme(ctx, 0, "(")) {
-        struct cst_node cond_code_node;
-        res = parse_condition_code(ctx, &cond_code_node);
-        if (res == PARSER_ERR) {
-            goto _error;
-        }
+        try_else(parse_condition_code(ctx, &cond_code_node), PARSER_OK, goto _error);
+        
         vec_push_u(&children, &cond_code_node);
+        cond_code_node = null_cst_node();
     }
 
 
-    struct cst_node args_node;
-    res = parse_args(ctx, &args_node);
-    if (res == PARSER_ERR) {
-        goto _error;
-    }
+    
+    try_else(parse_args(ctx, &args_node), PARSER_OK, goto _error);
+    
     vec_push_u(&children, &args_node);
+    args_node = null_cst_node();
 
 
     if (!is_line_terminated(ctx)) {
-        asprintfs(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
 
@@ -1175,46 +1346,57 @@ enum parser_result parse_macro_stmt(struct parser_context *ctx, struct cst_node 
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&args_node);
+    cst_node_deinit(&macro_node);
+    cst_node_deinit(&cond_code_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;
 }
 
 enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct cst_node *node) {
-    struct vector children;
-    vec_init_u(&children, 10, sizeof(struct cst_node));
+    struct vector children = null_vector();
     
+    
+    struct cst_node l_node = null_cst_node();
+    struct cst_node ident_node = null_cst_node();
+    struct cst_node colon_node = null_cst_node();
+
+    try_else(vec_init(&children, 10, sizeof(struct cst_node)), VEC_OK, goto _error);
 
     // BODY
 
     
     if (!is_matching_lexeme(ctx, 0, ".l")) {
-        asprintfs(&ctx->error, "Expected '.l', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected '.l', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node l_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &l_node), PARSER_OK, goto _error);
     vec_push_u(&children, &l_node);
+    l_node = null_cst_node();
 
 
 
     if (!is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        asprintfs(&ctx->error, "Expected identifier, found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected identifier, found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node ident_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &ident_node), PARSER_OK, goto _error);
     vec_push_u(&children, &ident_node);
+    ident_node = null_cst_node();
 
 
     if (!is_matching_lexeme(ctx, 0, ":")) {
-        asprintfs(&ctx->error, "Expected ':', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected ':', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    struct cst_node colon_node = make_terminal_node(ctx);
+    try_else(make_terminal_node(ctx, &colon_node), PARSER_OK, goto _error);
     vec_push_u(&children, &colon_node);
+    colon_node = null_cst_node();
 
 
     if (!is_line_terminated(ctx)) {
-        asprintfs(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx));
+        if (asprintf(&ctx->error, "Expected 'Line break', found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
 
@@ -1224,6 +1406,9 @@ enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct cst_n
     return PARSER_OK;
 
 _error:
+    cst_node_deinit(&l_node);
+    cst_node_deinit(&colon_node);
+    cst_node_deinit(&ident_node);
     vec_deinit(&children, &_cst_node_deinit);
 
     return PARSER_ERR;

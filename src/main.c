@@ -12,11 +12,11 @@
 
 
 int main(void) {
-    FILE *f = fopen("resources/example copy.asm", "r");
+    FILE *f = fopen("resources/example.asm", "r");
 
     
 
-    off_t s = get_file_size("resources/example copy.asm");
+    off_t s = get_file_size("resources/example.asm");
 
     char *in = malloc(sizeof(char) * s);
     fread(in, sizeof(char), s, f);
@@ -40,16 +40,23 @@ int main(void) {
         free(desc);
 
 
-    return 0;
+        return 0;
     }
 
-    for (size_t i = 0; i<out.length; i++) {
-        get_token_desc(vec_get_ptr(&out, i), &desc);
-        printf("%s\n", desc);
+    struct cst_node pout;
+    struct parser_error perr;
+    enum parser_result pres = parse(out.ptr, out.length, &pout, &perr);
+    if (pres == PARSER_OK) {
+        print_cst_node(stdout, &pout, 0);
+    } else {
+        char *desc;
+        parser_error_desc(&perr, &desc);
+        printf("%s", desc);
         free(desc);
     }
-    
 
+    free(perr.msg);
+    cst_node_deinit(&pout);
     free(in);
     vec_deinit(&out, &_token_deinit);
     fclose(f);

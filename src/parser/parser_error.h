@@ -10,12 +10,12 @@
 
 
 struct parser_error {
-    const char *msg;
+    char *msg; // Owned
 
     size_t line;
     size_t col;
 };
 
-char *parser_error_desc(struct parser_error *err);
+int parser_error_desc(struct parser_error *err, char **desc);
 
 #endif

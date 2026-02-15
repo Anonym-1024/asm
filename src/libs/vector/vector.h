@@ -36,7 +36,7 @@ void *vec_get_ptr(const struct vector *v, size_t index);
 
 void vec_empty(struct vector *v);
 
-
+struct vector null_vector();
 
 void vec_init_u(struct vector *v, size_t capacity, size_t element_size);
 

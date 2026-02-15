@@ -4,6 +4,7 @@
 
 
 #include "libs/utilities/utilities.h"
+#include <assert.h>
 
 
 
@@ -87,20 +88,24 @@ void print_cst_node(FILE *f, struct cst_node *n, int indent) {
 
 
 static size_t current_line(struct parser_context *ctx) {
-    if (ctx->index >= ctx->n) {
-        return 0;
-    }
+    assert(ctx->index < ctx->n);
     return ctx->in[ctx->index].line;
 }
 
 
 static size_t current_col(struct parser_context *ctx) {
-    if (ctx->index >= ctx->n) {
-        return 0;
-    }
+    assert(ctx->index < ctx->n);
     return ctx->in[ctx->index].col;
 }
 
+
+static struct cst_node null_cst_node() {
+    struct cst_node n;
+    n.children = null_vector();
+    n.terminal.lexeme = NULL;
+    n.kind = CST_TERMINAL;
+    return n;
+}
 
 enum parser_result parse(const struct token *in, size_t n, struct cst_node *out, struct parser_error *error) {
 
@@ -114,7 +119,7 @@ enum parser_result parse(const struct token *in, size_t n, struct cst_node *out,
         .error = NULL
     };
 
-    struct cst_node node;
+    struct cst_node node = null_cst_node();
     enum parser_result res = parse_file(&ctx, &node);
 
     if (res == PARSER_ERR) {
@@ -122,10 +127,12 @@ enum parser_result parse(const struct token *in, size_t n, struct cst_node *out,
         error->col = current_col(&ctx);
         error->msg = ctx.error;
 
+        cst_node_deinit(&node);
+        *out = null_cst_node();
         return PARSER_ERR;
     } 
 
-
+    error->msg = NULL;
     *out = node;
     return PARSER_OK;
 }

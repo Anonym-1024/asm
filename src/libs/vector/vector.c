@@ -139,3 +139,10 @@ void vec_pop_u(struct vector *v, void *x) {
         exit(1);
     }
 }
+
+
+struct vector null_vector() {
+    struct vector v;
+    v.ptr = NULL;
+    return v;
+}
