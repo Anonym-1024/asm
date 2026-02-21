@@ -123,12 +123,18 @@ enum parser_result parse(const struct token *in, size_t n, struct cst_node *out,
     enum parser_result res = parse_file(&ctx, &node);
 
     if (res == PARSER_ERR) {
+        if (ctx.error == NULL) {
+            asprintf(&ctx.error, "Unknown error.");
+            
+        }
         error->line = current_line(&ctx);
         error->col = current_col(&ctx);
         error->msg = ctx.error;
 
         cst_node_deinit(&node);
         *out = null_cst_node();
+
+        
         return PARSER_ERR;
     } 
 

@@ -3,6 +3,7 @@
 
 #include "parser_impl.h"
 #include "libs/utilities/utilities.h"
+#include <time.h>
 
 
 static bool is_matching_kind(struct parser_context *ctx, int offset, enum token_kind kind) {
@@ -159,7 +160,7 @@ enum parser_result parse_sections(struct parser_context *ctx, struct cst_node *n
     while (follows_section(ctx)) {
         try_else(parse_section(ctx, &section_node), PARSER_OK, goto _error);
         
-        vec_push_u(&children, &section_node);
+        try_else(vec_push(&children, &section_node), VEC_OK, goto _error);
         section_node = null_cst_node();
     }
     
@@ -200,7 +201,7 @@ enum parser_result parse_section(struct parser_context *ctx, struct cst_node *no
         
         
     }
-    vec_push_u(&children, &child_node);
+    try_else(vec_push(&children, &child_node), VEC_OK, goto _error);
     child_node = null_cst_node();
     
     node->children = children;
@@ -232,14 +233,14 @@ enum parser_result parse_data_section(struct parser_context *ctx, struct cst_nod
     
     try_else(parse_data_dir(ctx, &data_dir_node), PARSER_OK, goto _error);
     
-    vec_push_u(&children, &data_dir_node);
+    try_else(vec_push(&children, &data_dir_node), VEC_OK, goto _error);
     data_dir_node = null_cst_node();
 
 
     
     try_else(parse_data_stmts(ctx, &data_stmts_node), PARSER_OK, goto _error);
     
-    vec_push_u(&children, &data_stmts_node);
+    try_else(vec_push(&children, &data_stmts_node), VEC_OK, goto _error);
     data_stmts_node = null_cst_node();
 
 
@@ -273,7 +274,7 @@ enum parser_result parse_data_dir(struct parser_context *ctx, struct cst_node *n
         goto _error;
     }
     try_else(make_terminal_node(ctx, &data_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &data_node);
+    try_else(vec_push(&children, &data_node), VEC_OK, goto _error);
     data_node = null_cst_node();
 
 
@@ -282,7 +283,7 @@ enum parser_result parse_data_dir(struct parser_context *ctx, struct cst_node *n
         goto _error;
     }
     try_else(make_terminal_node(ctx, &colon_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &colon_node);
+    try_else(vec_push(&children, &colon_node), VEC_OK, goto _error);
     colon_node = null_cst_node();
 
 
@@ -324,7 +325,7 @@ enum parser_result parse_data_stmts(struct parser_context *ctx, struct cst_node 
     while (follows_data_stmt(ctx)) {
         try_else(parse_data_stmt(ctx, &data_stmt_node), PARSER_OK, goto _error);
         
-        vec_push_u(&children, &data_stmt_node);
+        try_else(vec_push(&children, &data_stmt_node), VEC_OK, goto _error);
         data_stmt_node = null_cst_node();
     }
 
@@ -367,7 +368,7 @@ enum parser_result parse_data_stmt(struct parser_context *ctx, struct cst_node *
         
         
     }
-    vec_push_u(&children, &child_node);
+    try_else(vec_push(&children, &child_node), VEC_OK, goto _error);
     child_node = null_cst_node();
 
     node->children = children;
@@ -404,7 +405,7 @@ enum parser_result parse_byte_stmt(struct parser_context *ctx, struct cst_node *
         goto _error;
     }
     try_else(make_terminal_node(ctx, &byte_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &byte_node);
+    try_else(vec_push(&children, &byte_node), VEC_OK, goto _error);
     byte_node = null_cst_node();
 
 
@@ -412,7 +413,7 @@ enum parser_result parse_byte_stmt(struct parser_context *ctx, struct cst_node *
         
         try_else(parse_initializer(ctx, &initializer_node), PARSER_OK, goto _error);
         
-        vec_push_u(&children, &initializer_node);
+        try_else(vec_push(&children, &initializer_node), VEC_OK, goto _error);
         initializer_node = null_cst_node();
     }
 
@@ -456,7 +457,7 @@ enum parser_result parse_bytes_stmt(struct parser_context *ctx, struct cst_node 
         goto _error;
     }
     try_else(make_terminal_node(ctx, &byte_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &byte_node);
+    try_else(vec_push(&children, &byte_node), VEC_OK, goto _error);
     byte_node = null_cst_node();
 
 
@@ -465,7 +466,7 @@ enum parser_result parse_bytes_stmt(struct parser_context *ctx, struct cst_node 
         goto _error;
     }
     try_else(make_terminal_node(ctx, &lpar_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &lpar_node);
+    try_else(vec_push(&children, &lpar_node), VEC_OK, goto _error);
     lpar_node = null_cst_node();
 
 
@@ -474,7 +475,7 @@ enum parser_result parse_bytes_stmt(struct parser_context *ctx, struct cst_node 
         goto _error;
     }
     try_else(make_terminal_node(ctx, &num_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &num_node);
+    try_else(vec_push(&children, &num_node), VEC_OK, goto _error);
     num_node = null_cst_node();
 
 
@@ -483,14 +484,14 @@ enum parser_result parse_bytes_stmt(struct parser_context *ctx, struct cst_node 
         goto _error;
     }
     try_else(make_terminal_node(ctx, &rpar_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &rpar_node);
+    try_else(vec_push(&children, &rpar_node), VEC_OK, goto _error);
     rpar_node = null_cst_node();
 
 
     if (follows_initializer(ctx)) {
         try_else(parse_initializer(ctx, &initializer_node), PARSER_OK, goto _error);
         
-        vec_push_u(&children, &initializer_node);
+        try_else(vec_push(&children, &initializer_node), VEC_OK, goto _error);
         initializer_node = null_cst_node();
     }
 
@@ -533,7 +534,7 @@ enum parser_result parse_label_stmt(struct parser_context *ctx, struct cst_node 
         goto _error;
     }
     try_else(make_terminal_node(ctx, &ident_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &ident_node);
+    try_else(vec_push(&children, &ident_node), VEC_OK, goto _error);
     ident_node = null_cst_node();
 
 
@@ -542,7 +543,7 @@ enum parser_result parse_label_stmt(struct parser_context *ctx, struct cst_node 
         goto _error;
     }
     try_else(make_terminal_node(ctx, &colon_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &colon_node);
+    try_else(vec_push(&children, &colon_node), VEC_OK, goto _error);
     colon_node = null_cst_node();
 
 
@@ -585,7 +586,7 @@ enum parser_result parse_initializer(struct parser_context *ctx, struct cst_node
         
     }
 
-    vec_push_u(&children, &child_node);
+    try_else(vec_push(&children, &child_node), VEC_OK, goto _error);
     child_node = null_cst_node();
 
     node->children = children;
@@ -619,14 +620,14 @@ enum parser_result parse_byte_initializer(struct parser_context *ctx, struct cst
         goto _error;
     }
     try_else(make_terminal_node(ctx, &lpar_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &lpar_node);
+    try_else(vec_push(&children, &lpar_node), VEC_OK, goto _error);
     lpar_node = null_cst_node();
 
 
     
     try_else(parse_numbers(ctx, &numbers_node), PARSER_OK, goto _error);
     
-    vec_push_u(&children, &numbers_node);
+    try_else(vec_push(&children, &numbers_node), VEC_OK, goto _error);
     numbers_node = null_cst_node();
 
 
@@ -635,7 +636,7 @@ enum parser_result parse_byte_initializer(struct parser_context *ctx, struct cst
         goto _error;
     }
     try_else(make_terminal_node(ctx, &rpar_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &rpar_node);
+    try_else(vec_push(&children, &rpar_node), VEC_OK, goto _error);
     rpar_node = null_cst_node();
 
     
@@ -672,13 +673,13 @@ enum parser_result parse_numbers(struct parser_context *ctx, struct cst_node *no
 
     
     try_else(make_terminal_node(ctx, &number_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &number_node);
+    try_else(vec_push(&children, &number_node), VEC_OK, goto _error);
     number_node = null_cst_node();
 
     
     while (is_matching_lexeme(ctx, 0, ",")) {
         try_else(make_terminal_node(ctx, &number_node), PARSER_OK, goto _error);
-        vec_push_u(&children, &number_node); 
+        try_else(vec_push(&children, &number_node), VEC_OK, goto _error); 
         number_node = null_cst_node();
 
         if (!is_matching_kind(ctx, 0, TOKEN_NUM)) {
@@ -687,7 +688,7 @@ enum parser_result parse_numbers(struct parser_context *ctx, struct cst_node *no
         }
 
         try_else(make_terminal_node(ctx, &number_node), PARSER_OK, goto _error);
-        vec_push_u(&children, &number_node);
+        try_else(vec_push(&children, &number_node), VEC_OK, goto _error);
         number_node = null_cst_node(); 
     }
 
@@ -717,14 +718,14 @@ enum parser_result parse_exec_section(struct parser_context *ctx, struct cst_nod
 
     
     try_else(parse_exec_dir(ctx, &exec_dir_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &exec_dir_node);
+    try_else(vec_push(&children, &exec_dir_node), VEC_OK, goto _error);
     exec_dir_node = null_cst_node();
 
 
     
     try_else(parse_exec_stmts(ctx, &exec_stmts_node), PARSER_OK, goto _error);
     
-    vec_push_u(&children, &exec_stmts_node);
+    try_else(vec_push(&children, &exec_stmts_node), VEC_OK, goto _error);
     exec_stmts_node = null_cst_node();
     
 
@@ -758,7 +759,7 @@ enum parser_result parse_exec_dir(struct parser_context *ctx, struct cst_node *n
         goto _error;
     }
     try_else(make_terminal_node(ctx, &data_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &data_node);
+    try_else(vec_push(&children, &data_node), VEC_OK, goto _error);
     data_node = null_cst_node();
 
 
@@ -767,7 +768,7 @@ enum parser_result parse_exec_dir(struct parser_context *ctx, struct cst_node *n
         goto _error;
     }
     try_else(make_terminal_node(ctx, &colon_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &colon_node);
+    try_else(vec_push(&children, &colon_node), VEC_OK, goto _error);
     colon_node = null_cst_node();
 
 
@@ -812,7 +813,7 @@ enum parser_result parse_exec_stmts(struct parser_context *ctx, struct cst_node 
     while (follows_exec_stmt(ctx)) {
         try_else(parse_exec_stmt(ctx, &exec_stmt_node), PARSER_OK, goto _error);
         
-        vec_push_u(&children, &exec_stmt_node);
+        try_else(vec_push(&children, &exec_stmt_node), VEC_OK, goto _error);
         exec_stmt_node = null_cst_node();
     }
 
@@ -856,7 +857,7 @@ enum parser_result parse_exec_stmt(struct parser_context *ctx, struct cst_node *
         try_else(parse_loc_label_stmt(ctx, &child_node), PARSER_OK, goto _error);
         
     }
-    vec_push_u(&children, &child_node);
+    try_else(vec_push(&children, &child_node), VEC_OK, goto _error);
     child_node = null_cst_node();
 
 
@@ -889,14 +890,14 @@ enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct cst
         goto _error;
     }
     try_else(make_terminal_node(ctx, &instr_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &instr_node);
+    try_else(vec_push(&children, &instr_node), VEC_OK, goto _error);
     instr_node = null_cst_node();
 
     if (is_matching_lexeme(ctx, 0, "(")) {
        
         try_else(parse_condition_code(ctx, &cond_code_node), PARSER_OK, goto _error);
         
-        vec_push_u(&children, &cond_code_node);
+        try_else(vec_push(&children, &cond_code_node), VEC_OK, goto _error);
         cond_code_node = null_cst_node();
     }
 
@@ -904,7 +905,7 @@ enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct cst
     
     try_else(parse_args(ctx, &args_node), PARSER_OK, goto _error);
     
-    vec_push_u(&children, &args_node);
+    try_else(vec_push(&children, &args_node), VEC_OK, goto _error);
     args_node = null_cst_node();
 
 
@@ -945,7 +946,7 @@ enum parser_result parse_condition_code(struct parser_context *ctx, struct cst_n
         goto _error;
     }
     try_else(make_terminal_node(ctx, &lpar_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &lpar_node);
+    try_else(vec_push(&children, &lpar_node), VEC_OK, goto _error);
     lpar_node = null_cst_node();
 
 
@@ -955,7 +956,7 @@ enum parser_result parse_condition_code(struct parser_context *ctx, struct cst_n
         goto _error;
     }
     try_else(make_terminal_node(ctx, &cond_code_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &cond_code_node);
+    try_else(vec_push(&children, &cond_code_node), VEC_OK, goto _error);
     cond_code_node = null_cst_node();
 
 
@@ -964,7 +965,7 @@ enum parser_result parse_condition_code(struct parser_context *ctx, struct cst_n
         goto _error;
     }
     try_else(make_terminal_node(ctx, &rpar_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &rpar_node);
+    try_else(vec_push(&children, &rpar_node), VEC_OK, goto _error);
     rpar_node = null_cst_node();
     
 
@@ -1015,18 +1016,18 @@ enum parser_result parse_args(struct parser_context *ctx, struct cst_node *node)
     }
     try_else(parse_arg(ctx, &arg_node), PARSER_OK, goto _error);
     
-    vec_push_u(&children, &arg_node);
+    try_else(vec_push(&children, &arg_node), VEC_OK, goto _error);
     arg_node = null_cst_node();
 
     while (is_matching_lexeme(ctx, 0, ",")) {
         try_else(make_terminal_node(ctx, &arg_node), PARSER_OK, goto _error);
-        vec_push_u(&children, &arg_node);
+        try_else(vec_push(&children, &arg_node), VEC_OK, goto _error);
         arg_node = null_cst_node();
 
        
         try_else(parse_arg(ctx, &arg_node), PARSER_OK, goto _error);
         
-        vec_push_u(&children, &arg_node);
+        try_else(vec_push(&children, &arg_node), VEC_OK, goto _error);
         arg_node = null_cst_node();
     }
     
@@ -1071,7 +1072,7 @@ enum parser_result parse_arg(struct parser_context *ctx, struct cst_node *node) 
         if (asprintf(&ctx->error, "Expected argument, found '%s' instead.", current_token_lexeme(ctx)) == -1) { free(ctx->error); }
         goto _error;
     }
-    vec_push_u(&children, &child_node);
+    try_else(vec_push(&children, &child_node), VEC_OK, goto _error);
     child_node = null_cst_node();
 
 
@@ -1103,7 +1104,7 @@ enum parser_result parse_immediate(struct parser_context *ctx, struct cst_node *
         goto _error;
     }
     try_else(make_terminal_node(ctx, &hash_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &hash_node);
+    try_else(vec_push(&children, &hash_node), VEC_OK, goto _error);
     hash_node = null_cst_node();
 
 
@@ -1112,7 +1113,7 @@ enum parser_result parse_immediate(struct parser_context *ctx, struct cst_node *
         goto _error;
     }
     try_else(make_terminal_node(ctx, &num_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &num_node);
+    try_else(vec_push(&children, &num_node), VEC_OK, goto _error);
     num_node = null_cst_node();
 
 
@@ -1145,7 +1146,7 @@ enum parser_result parse_label(struct parser_context *ctx, struct cst_node *node
         goto _error;
     }
     try_else(make_terminal_node(ctx, &ident_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &ident_node);
+    try_else(vec_push(&children, &ident_node), VEC_OK, goto _error);
     ident_node = null_cst_node();
 
     node->children = children;
@@ -1178,7 +1179,7 @@ enum parser_result parse_loc_label(struct parser_context *ctx, struct cst_node *
     
     try_else(parse_direction_dir(ctx, &direction_node), PARSER_OK, goto _error);
     
-    vec_push_u(&children, &direction_node);
+    try_else(vec_push(&children, &direction_node), VEC_OK, goto _error);
     direction_node = null_cst_node();
 
 
@@ -1186,7 +1187,7 @@ enum parser_result parse_loc_label(struct parser_context *ctx, struct cst_node *
         
         try_else(parse_loc_label_dist(ctx, &dist_node), PARSER_OK, goto _error);
         
-        vec_push_u(&children, &dist_node);
+        try_else(vec_push(&children, &dist_node), VEC_OK, goto _error);
         dist_node = null_cst_node();
     }
 
@@ -1196,7 +1197,7 @@ enum parser_result parse_loc_label(struct parser_context *ctx, struct cst_node *
         goto _error;
     }
     try_else(make_terminal_node(ctx, &ident_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &ident_node);
+    try_else(vec_push(&children, &ident_node), VEC_OK, goto _error);
     ident_node = null_cst_node();
 
 
@@ -1229,7 +1230,7 @@ enum parser_result parse_direction_dir(struct parser_context *ctx, struct cst_no
         goto _error;
     }
     try_else(make_terminal_node(ctx, &dir_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &dir_node);
+    try_else(vec_push(&children, &dir_node), VEC_OK, goto _error);
     dir_node = null_cst_node();
 
 
@@ -1262,7 +1263,7 @@ enum parser_result parse_loc_label_dist(struct parser_context *ctx, struct cst_n
         goto _error;
     }
     try_else(make_terminal_node(ctx, &lpar_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &lpar_node);
+    try_else(vec_push(&children, &lpar_node), VEC_OK, goto _error);
     lpar_node = null_cst_node();
 
 
@@ -1272,7 +1273,7 @@ enum parser_result parse_loc_label_dist(struct parser_context *ctx, struct cst_n
         goto _error;
     }
     try_else(make_terminal_node(ctx, &num_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &num_node);
+    try_else(vec_push(&children, &num_node), VEC_OK, goto _error);
     num_node = null_cst_node();
 
 
@@ -1281,7 +1282,7 @@ enum parser_result parse_loc_label_dist(struct parser_context *ctx, struct cst_n
         goto _error;
     }
     try_else(make_terminal_node(ctx, &rpar_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &rpar_node);
+    try_else(vec_push(&children, &rpar_node), VEC_OK, goto _error);
     rpar_node = null_cst_node();
 
 
@@ -1317,13 +1318,13 @@ enum parser_result parse_macro_stmt(struct parser_context *ctx, struct cst_node 
         goto _error;
     }
     try_else(make_terminal_node(ctx, &macro_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &macro_node);
+    try_else(vec_push(&children, &macro_node), VEC_OK, goto _error);
     macro_node = null_cst_node();
 
     if (is_matching_lexeme(ctx, 0, "(")) {
         try_else(parse_condition_code(ctx, &cond_code_node), PARSER_OK, goto _error);
         
-        vec_push_u(&children, &cond_code_node);
+        try_else(vec_push(&children, &cond_code_node), VEC_OK, goto _error);
         cond_code_node = null_cst_node();
     }
 
@@ -1331,7 +1332,7 @@ enum parser_result parse_macro_stmt(struct parser_context *ctx, struct cst_node 
     
     try_else(parse_args(ctx, &args_node), PARSER_OK, goto _error);
     
-    vec_push_u(&children, &args_node);
+    try_else(vec_push(&children, &args_node), VEC_OK, goto _error);
     args_node = null_cst_node();
 
 
@@ -1372,7 +1373,7 @@ enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct cst_n
         goto _error;
     }
     try_else(make_terminal_node(ctx, &l_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &l_node);
+    try_else(vec_push(&children, &l_node), VEC_OK, goto _error);
     l_node = null_cst_node();
 
 
@@ -1382,7 +1383,7 @@ enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct cst_n
         goto _error;
     }
     try_else(make_terminal_node(ctx, &ident_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &ident_node);
+    try_else(vec_push(&children, &ident_node), VEC_OK, goto _error);
     ident_node = null_cst_node();
 
 
@@ -1391,7 +1392,7 @@ enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct cst_n
         goto _error;
     }
     try_else(make_terminal_node(ctx, &colon_node), PARSER_OK, goto _error);
-    vec_push_u(&children, &colon_node);
+    try_else(vec_push(&children, &colon_node), VEC_OK, goto _error);
     colon_node = null_cst_node();
 
 

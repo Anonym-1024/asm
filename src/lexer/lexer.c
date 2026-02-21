@@ -7,7 +7,6 @@
 #include "libs/error_handling.h"
 
 
-
 struct lexer_context {
     const char *in; //! Reference
     size_t n;

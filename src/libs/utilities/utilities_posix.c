@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <stdarg.h>
 
-
 off_t get_file_size(const char *path) {
     struct stat st;
     stat(path, &st);

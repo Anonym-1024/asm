@@ -9,9 +9,10 @@
 #include "ast/ast.h"
 
 
-
-
 int main(void) {
+
+    
+
     FILE *f = fopen("resources/example.asm", "r");
 
     

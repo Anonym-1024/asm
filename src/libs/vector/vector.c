@@ -1,5 +1,6 @@
 
 #include "vector.h"
+#include <time.h>
 
 
 const char *vector_error_desc(enum vector_error err) {
