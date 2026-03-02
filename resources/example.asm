@@ -1,13 +1,12 @@
-
-
 .EXEC:
-main:
-.l loop:
-    cmp r0, r1
-    !b(eq) .f(7) loop
-    mov r1, r0
-    !b .b loop
-.l loop:
+    .l hh:
+    mov r6, p4, .f hh
+    mov r6
+    .start:
+.DATA:
 
-
-
+struktura:
+    byte 9
+    bytes(9) "shhd"
+    bytes (9) {8, 9, 9}
+    

@@ -13,11 +13,11 @@ int main(void) {
 
     
 
-    FILE *f = fopen("resources/example copy.asm", "r");
+    FILE *f = fopen("resources/example.asm", "r");
 
     
 
-    off_t s = get_file_size("resources/example copy.asm");
+    off_t s = get_file_size("resources/example.asm");
 
     char *in = malloc(sizeof(char) * s);
     fread(in, sizeof(char), s, f);
@@ -48,7 +48,7 @@ int main(void) {
     enum parser_result ss = parse(out.ptr, out.length, &file, &err);
 
     if (ss == PARSER_OK) {
-        printf("Hura!, %ld", file.sections.length);
+        
         ast_file_deinit(&file);
     } else {
         print_compiler_error(stdout, &err);

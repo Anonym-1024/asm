@@ -115,7 +115,8 @@ enum ast_exec_stmt_kind {
     AST_EXEC_STMT_INSTRUCTION_STMT,
     AST_EXEC_STMT_MACRO_STMT,
     AST_EXEC_STMT_LABEL_STMT,
-    AST_EXEC_STMT_LOC_LABEL_STMT
+    AST_EXEC_STMT_LOC_LABEL_STMT,
+    AST_EXEC_STMT_START_STMT
 };
 
 struct ast_exec_stmt {
@@ -223,5 +224,5 @@ void null_ast_arg(struct ast_arg *node);
 */
 
 
-
+void print_ast_file(struct ast_file *file);
 #endif

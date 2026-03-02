@@ -112,6 +112,9 @@ void ast_exec_stmt_deinit(struct ast_exec_stmt *node) {
     case AST_EXEC_STMT_LOC_LABEL_STMT:
         ast_loc_label_stmt_deinit(&node->loc_label_stmt);
     break;
+
+    case AST_EXEC_STMT_START_STMT:
+    break;
     }
 }
 

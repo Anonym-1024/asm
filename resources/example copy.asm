@@ -2,8 +2,8 @@
     bytes(2) {89, 90}
 
 .EXEC:
-    mov r6, r7, .b k
-     mov r6, r7, .b k, pc_b0
+    mov r6, r7, r7
+    mov r6, r7, .b k, pc_b0
 lable:
 .l Jk:
 .DATA:
@@ -93973,7 +93973,7 @@ lable:
 lable:
 .l Jk:
 .DATA:
-    bytes(2) {89, 90}
+    bytes(2)
 
 .EXEC:
     mov r6, r7, .b k

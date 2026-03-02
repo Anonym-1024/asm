@@ -58,6 +58,8 @@ enum parser_result parse_exec_stmts(struct parser_context *ctx, struct vector *s
 
 enum parser_result parse_exec_stmt(struct parser_context *ctx, struct ast_exec_stmt *stmt);
 
+enum parser_result parse_start_stmt(struct parser_context *ctx);
+
 enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct ast_instruction_stmt *stmt);
 
 enum parser_result parse_condition_code(struct parser_context *ctx, struct ast_terminal *cond);

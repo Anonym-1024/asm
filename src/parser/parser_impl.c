@@ -231,7 +231,8 @@ static bool follows_exec_stmt(struct parser_context *ctx) {
     return is_matching_kind(ctx, 0, TOKEN_INSTR)
             || is_matching_kind(ctx, 0, TOKEN_MACRO)
             || is_matching_kind(ctx, 0, TOKEN_IDENT)
-            || is_matching_lexeme(ctx, 0, ".l");
+            || is_matching_lexeme(ctx, 0, ".l")
+            || is_matching_lexeme(ctx, 0, ".start");
 }
 
 enum parser_result parse_data_stmts(struct parser_context *ctx, struct vector *stmts) {
@@ -675,6 +676,9 @@ enum parser_result parse_exec_stmt(struct parser_context *ctx, struct ast_exec_s
         stmt->kind = AST_EXEC_STMT_LOC_LABEL_STMT;
         try_else(parse_loc_label_stmt(ctx, &stmt->loc_label_stmt), PARSER_OK, goto _error);
         _loc_label_stmt = true;
+    } else if (is_matching_lexeme(ctx, 0, ".start")) {
+        stmt->kind = AST_EXEC_STMT_START_STMT;
+        try_else(parse_start_stmt(ctx), PARSER_OK, goto _error);
     } else {
         asprintf(&ctx->error_msg, "Expected an instruction, macro, label or a local label statement, found '%.15s' instead.", current_lexeme(ctx));
         goto _error;
@@ -702,6 +706,32 @@ _error:
     if (_loc_label_stmt) {
         ast_loc_label_stmt_deinit(&stmt->loc_label_stmt);
     }
+
+    return PARSER_ERR;
+}
+
+enum parser_result parse_start_stmt(struct parser_context *ctx) {
+    if (!is_matching_lexeme(ctx, 0, ".start")) {
+        asprintf(&ctx->error_msg, "Expected '.start', found '%.15s' instead.", current_lexeme(ctx));
+        goto _error;
+    }
+    next(ctx);
+
+    if (!is_matching_lexeme(ctx, 0, ":")) {
+        asprintf(&ctx->error_msg, "Expected ':', found '%.15s' instead.", current_lexeme(ctx));
+        goto _error;
+    }
+    next(ctx);
+
+    if (!is_matching_lexeme(ctx, 0, "\n") && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
+        asprintf(&ctx->error_msg, "Expected '\\n', found '%.15s' instead.", current_lexeme(ctx));
+        goto _error;
+    }
+    pop_blank_lines(ctx);
+
+    return PARSER_OK;
+
+_error:
 
     return PARSER_ERR;
 }
