@@ -19,7 +19,7 @@ struct lexer_context {
 
     struct vector buffer; //! Owned
 
-    enum lexer_error_kind error;
+    char *error_msg;
 };
 
 
@@ -96,7 +96,7 @@ enum lexer_result add_token(struct lexer_context *ctx, enum token_kind kind) {
 
 _error:
     
-    ctx->error = LEX_MEM_ERR;
+    asprintf(&ctx->error_msg, "Memory error.");
     return LEX_ERR;
 
 }
@@ -132,7 +132,7 @@ static enum lexer_result read_new_line(struct lexer_context *ctx) {
 
 _error:
 
-    ctx->error = LEX_MEM_ERR;
+    asprintf(&ctx->error_msg, "Memory error.");
     return LEX_ERR;
 }
 
@@ -157,7 +157,7 @@ static enum lexer_result read_punctuation(struct lexer_context *ctx, char c) {
 
 
 _error:
-
+    asprintf(&ctx->error_msg, "Memory error.");
     return LEX_ERR;
 }
 
@@ -189,7 +189,7 @@ static enum lexer_result read_directive(struct lexer_context *ctx) {
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
 
     if (!is_directive(ctx->buffer.ptr)) {
-        ctx->error = LEX_INV_DIR;
+        asprintf(&ctx->error_msg, "'%s' is not a directive.", (char*)ctx->buffer.ptr);
         return LEX_ERR;
     }
 
@@ -198,6 +198,7 @@ static enum lexer_result read_directive(struct lexer_context *ctx) {
     return LEX_OK;
 
 _error:
+    asprintf(&ctx->error_msg, "Memory error.");
     return LEX_ERR;
 }
 
@@ -229,7 +230,7 @@ static enum lexer_result read_macro(struct lexer_context *ctx) {
 
 
     if (!is_macro(ctx->buffer.ptr)) {
-        ctx->error = LEX_INV_MACRO;
+        asprintf(&ctx->error_msg, "'%s' is not a macro", (char*)ctx->buffer.ptr);
         return LEX_ERR;
     }
 
@@ -238,6 +239,7 @@ static enum lexer_result read_macro(struct lexer_context *ctx) {
     return LEX_OK;
 
 _error:
+    asprintf(&ctx->error_msg, "Memory error.");
     return LEX_ERR;
 }
 
@@ -343,6 +345,7 @@ static enum lexer_result read_word(struct lexer_context *ctx) {
     return LEX_OK;
 
 _error:
+    asprintf(&ctx->error_msg, "Memory error.");
     return LEX_ERR;
 }
 
@@ -354,14 +357,14 @@ static enum lexer_result read_ascii(struct lexer_context *ctx) {
     char c;
     while(get_char(ctx, &c) == true && c != '"') {
         if (!is_printable_char(c)) {
-            ctx->error = LEX_INV_ASCII_LIT;
+            asprintf(&ctx->error_msg, "'%c' is not a valid ascii character.", c);
             return LEX_ERR;
         }
         try_else(vec_push(&ctx->buffer, &c), VEC_OK, goto _error);
         pop_char(ctx);
     }
     if (c != '"') {
-        ctx->error = LEX_UNTERM_ASCII_LIT;
+        asprintf(&ctx->error_msg, "Unterminated ascii literal.");
         return LEX_ERR;
     }
     pop_char(ctx);
@@ -374,6 +377,7 @@ static enum lexer_result read_ascii(struct lexer_context *ctx) {
     return LEX_OK;
 
 _error:
+    asprintf(&ctx->error_msg, "Memory error.");
     return LEX_ERR;
 
 }
@@ -407,6 +411,7 @@ static enum lexer_result read_number(struct lexer_context *ctx) {
     return LEX_OK;
 
 _error:
+    asprintf(&ctx->error_msg, "Memory error.");
     return LEX_ERR;
 }
 
@@ -421,7 +426,7 @@ void _token_deinit(void *ptr) {
 }
 
 
-enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct lexer_error *error) {
+enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct compiler_error *error) {
 
     
     struct lexer_context ctx = {
@@ -433,10 +438,10 @@ enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct 
         .col = 1,
         .start_col = 1,
 
-        .error = LEX_UNKNOWN_ERR,
+        .error_msg = NULL,
 
-        .buffer.ptr = NULL,
-        .out.ptr = NULL
+        .buffer = null_vector(),
+        .out = null_vector()
     }; 
     char *eof_lexeme = NULL;
     
@@ -476,7 +481,7 @@ enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct 
             try_else(read_word(&ctx), LEX_OK, goto _error);
             
         } else {
-            ctx.error = LEX_INV_CHAR;
+            asprintf(&ctx.error_msg, "'%c' is not a valid character", c);
             goto _error;
         }
     }
@@ -484,8 +489,8 @@ enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct 
     
     struct token eof = {
         .kind = TOKEN_EOF,
-        .line = 0,
-        .col = 0,
+        .line = ctx.line,
+        .col = ctx.col,
         .lexeme = eof_lexeme
     };
     if ((eof.lexeme = malloc(sizeof(char) * 1)) == NULL) {
@@ -507,9 +512,15 @@ _error:
     *out = null_vector();
     vec_deinit(&ctx.buffer, NULL);
     vec_deinit(&ctx.out, &_token_deinit);
+
+
+    if (ctx.error_msg == NULL) {
+        asprintf(&ctx.error_msg, "Memory error.");
+    }
     error->line = ctx.line;
     error->col = ctx.start_col;
-    error->kind = ctx.error;
+    error->kind = LEXER_ERROR;
+    error->msg = ctx.error_msg;
     return LEX_ERR;
 }
 

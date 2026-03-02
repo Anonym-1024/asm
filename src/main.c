@@ -4,20 +4,20 @@
 #include "libs/vector/vector.h"
 #include "libs/error_handling.h"
 #include "libs/utilities/utilities.h"
-#include "parser/parser.h"
+#include "error/compiler_error.h"
 #include <assert.h>
-#include "ast/ast.h"
+#include "parser/parser.h"
 
 
 int main(void) {
 
     
 
-    FILE *f = fopen("resources/example.asm", "r");
+    FILE *f = fopen("resources/example copy.asm", "r");
 
     
 
-    off_t s = get_file_size("resources/example.asm");
+    off_t s = get_file_size("resources/example copy.asm");
 
     char *in = malloc(sizeof(char) * s);
     fread(in, sizeof(char), s, f);
@@ -25,26 +25,39 @@ int main(void) {
     
     struct vector out;
     
-    struct lexer_error err;
+    struct compiler_error err;
 
     
     enum lexer_result c = tokenise(in, s, &out, &err);
-    char *desc;
+    
 
     if (c == LEX_ERR) {
         
-        lexer_error_desc(&err, &desc);
-        printf("%s", desc);
-        free(in);
+        print_compiler_error(stdout, &err);
+        compiler_error_deinit(&err);
    
         fclose(f);
-        free(desc);
+        
 
 
         return 0;
     }
 
-    struct cst_node pout;
+    
+    struct ast_file file;
+    enum parser_result ss = parse(out.ptr, out.length, &file, &err);
+
+    if (ss == PARSER_OK) {
+        printf("Hura!, %ld", file.sections.length);
+        ast_file_deinit(&file);
+    } else {
+        print_compiler_error(stdout, &err);
+        compiler_error_deinit(&err);
+    }
+    
+    vec_deinit(&out, _token_deinit);
+
+    /*struct cst_node pout;
     struct parser_error perr;
     enum parser_result pres = parse(out.ptr, out.length, &pout, &perr);
     if (pres == PARSER_OK) {
@@ -55,12 +68,13 @@ int main(void) {
         printf("%s", desc);
         free(desc);
     }
+    
 
     free(perr.msg);
     cst_node_deinit(&pout);
     free(in);
     vec_deinit(&out, &_token_deinit);
     fclose(f);
-
+    */
     return 0;
 }

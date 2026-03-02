@@ -11,7 +11,7 @@
 
 
 
-#include "lexer_error.h"
+#include "error/compiler_error.h"
 #include "libs/vector/vector.h"
 
 
@@ -55,6 +55,6 @@ enum lexer_result {
 int get_token_desc(struct token *t, char **out);
 
 
-enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct lexer_error *error);
+enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct compiler_error *error);
 
 #endif
