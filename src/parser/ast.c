@@ -70,7 +70,7 @@ void _ast_arg_deinit(void *node) {
 
 
 void ast_terminal_deinit(struct ast_terminal *node) {
-    free(node->lexeme);
+    //free(node->lexeme);
     node->lexeme = NULL;
 }
 
@@ -116,6 +116,7 @@ void ast_exec_stmt_deinit(struct ast_exec_stmt *node) {
     case AST_EXEC_STMT_START_STMT:
     break;
     }
+    
 }
 
 

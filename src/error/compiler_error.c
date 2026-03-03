@@ -15,6 +15,10 @@ void print_compiler_error(FILE *file, struct compiler_error *err) {
         case PARSER_ERROR:
         kind_s = "PARSER ERROR";
         break;
+
+        default:
+        kind_s = "";
+        break;
     }
     fprintf(file, "%s [%ld:%ld]: %s", kind_s, err->line, err->col, err->msg);
 }

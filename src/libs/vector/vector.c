@@ -3,7 +3,7 @@
 #include <time.h>
 
 
-const char *vector_error_desc(enum vector_error err) {
+const char *vector_error_desc(enum vector_result err) {
     switch (err) {
         case VEC_OK:
         return "Vector success.";
@@ -22,7 +22,7 @@ const char *vector_error_desc(enum vector_error err) {
     }
 }
 
-enum vector_error vec_init(struct vector *v, size_t capacity, size_t element_size) {
+enum vector_result vec_init(struct vector *v, size_t capacity, size_t element_size) {
     v->capacity = capacity;
     v->element_size = element_size;
     v->length = 0;
@@ -35,7 +35,7 @@ enum vector_error vec_init(struct vector *v, size_t capacity, size_t element_siz
     return VEC_OK;
 }
 
-enum vector_error vec_push(struct vector *v, void *x) {
+enum vector_result vec_push(struct vector *v, void *x) {
     if (v->ptr == NULL) {
         return VEC_NULL_PTR;
     }
@@ -56,7 +56,7 @@ enum vector_error vec_push(struct vector *v, void *x) {
 }
 
 
-enum vector_error vec_get(const struct vector *v, void *x, size_t index) {
+enum vector_result vec_get(const struct vector *v, void *x, size_t index) {
     if (v->ptr == NULL) {
         return VEC_NULL_PTR;
     }
@@ -70,7 +70,7 @@ enum vector_error vec_get(const struct vector *v, void *x, size_t index) {
 }
 
 
-enum vector_error vec_pop(struct vector *v, void *x) {
+enum vector_result vec_pop(struct vector *v, void *x) {
     if (v->ptr == NULL) {
         return VEC_NULL_PTR;
     }
@@ -142,7 +142,7 @@ void vec_pop_u(struct vector *v, void *x) {
 }
 
 
-struct vector null_vector() {
+struct vector null_vector(void) {
     struct vector v;
     v.ptr = NULL;
     return v;

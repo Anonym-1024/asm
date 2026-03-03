@@ -33,14 +33,15 @@ static void next(struct parser_context *ctx) {
 static enum parser_result copy_terminal(struct parser_context *ctx, struct ast_terminal *term) {
     const struct token *t = &ctx->in[ctx->index];
 
-    term->lexeme = malloc(strlen(t->lexeme) * sizeof(char) + 1);
+    /*term->lexeme = malloc(strlen(t->lexeme) * sizeof(char) + 1);
     if (term->lexeme == NULL) {
         return PARSER_ERR;
     }
     strcpy(term->lexeme, t->lexeme);
-
+    */
     term->line = t->line;
     term->col = t->col;
+    term->lexeme = t->lexeme;
     
     return PARSER_OK;
 }
@@ -528,7 +529,7 @@ enum parser_result parse_numbers(struct parser_context *ctx, struct vector *numb
     bool _numbers = false;
     bool _number = false;
 
-    try_else(vec_init(numbers, 10, sizeof(struct ast_terminal)), VEC_OK, goto _error);
+    try_else(vec_init(numbers,4, sizeof(struct ast_terminal)), VEC_OK, goto _error);
     _numbers = true;
 
     struct ast_terminal number;
@@ -836,7 +837,7 @@ enum parser_result parse_args(struct parser_context *ctx, struct vector *args) {
     bool _args = false;
     bool _arg = false;
 
-    try_else(vec_init(args, 10, sizeof(struct ast_arg)), VEC_OK, goto _error);
+    try_else(vec_init(args, 3, sizeof(struct ast_arg)), VEC_OK, goto _error);
     _args = true;
 
     struct ast_arg arg;
