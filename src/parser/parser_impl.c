@@ -31,7 +31,7 @@ static void next(struct parser_context *ctx) {
 }
 
 static enum parser_result copy_terminal(struct parser_context *ctx, struct ast_terminal *term) {
-    const struct token *t = &ctx->in[ctx->index];
+    struct token *t = &ctx->in[ctx->index];
 
     /*term->lexeme = malloc(strlen(t->lexeme) * sizeof(char) + 1);
     if (term->lexeme == NULL) {
@@ -42,6 +42,7 @@ static enum parser_result copy_terminal(struct parser_context *ctx, struct ast_t
     term->line = t->line;
     term->col = t->col;
     term->lexeme = t->lexeme;
+    t->lexeme = NULL;
     
     return PARSER_OK;
 }

@@ -8,7 +8,7 @@
 #include "ast.h"
 
 struct parser_context {
-    const struct token *in;
+    struct token *in;
     size_t n;
     size_t index;
 

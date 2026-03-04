@@ -2,7 +2,7 @@
 #include "parser.h"
 
 
-enum parser_result parse(const struct token *in, size_t n, struct ast_file *out, struct compiler_error *err) {
+enum parser_result parse(struct token *in, size_t n, struct ast_file *out, struct compiler_error *err) {
 
     struct parser_context ctx = {
         .in = in,

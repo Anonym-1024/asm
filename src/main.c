@@ -12,7 +12,7 @@
 
 int main(void) {
 
-
+    /*
     struct hashmap map;
     hashmap_init(&map, 2, sizeof(int), NULL);
     int c = 8;
@@ -47,12 +47,12 @@ int main(void) {
 
 
     
-    /*
-    FILE *f = fopen("resources/example copy.asm", "r");
+    */
+    FILE *f = fopen("resources/b.txt", "r");
 
     
 
-    off_t s = get_file_size("resources/example copy.asm");
+    off_t s = get_file_size("resources/b.txt");
 
     char *in = malloc(sizeof(char) * s);
     fread(in, sizeof(char), s, f);
@@ -64,7 +64,7 @@ int main(void) {
 
     
     enum lexer_result c = tokenise(in, s, &out, &err);
-    
+    free(in);
 
     if (c == LEX_ERR) {
         
@@ -84,16 +84,19 @@ int main(void) {
     
     if (ss == PARSER_OK) {
         
-        //printf("%s", vec_get_ptr_t(&vec_get_ptr_t(&file.sections, 0, struct ast_section)->data_section.data_stmts, 0, struct ast_data_stmt)->label_stmt.ident.lexeme);
         
+        //printf("%s", vec_get_ptr_t(&vec_get_ptr_t(&file.sections, 0, struct ast_section)->data_section.data_stmts, 0, struct ast_data_stmt)->label_stmt.ident.lexeme);
+        vec_deinit(&out, &_token_deinit);
+        printf("Hura");
+        sleep(10);
         ast_file_deinit(&file);
     } else {
         print_compiler_error(stdout, &err);
         compiler_error_deinit(&err);
     }
     
-    vec_deinit(&out, &_token_deinit);
-    */
+    
+    
     /*struct cst_node pout;
     struct parser_error perr;
     enum parser_result pres = parse(out.ptr, out.length, &pout, &perr);
