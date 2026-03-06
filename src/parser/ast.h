@@ -2,7 +2,7 @@
 #ifndef __AST_HEADER__
 #define __AST_HEADER__
 
-#include "libs/vector/vector.h"
+
 #include <stdlib.h>
 #include <stdbool.h>
 
@@ -10,14 +10,13 @@
 
 
 struct ast_terminal {
-    char *lexeme;
-    size_t line;
-    size_t col;
+    struct token *token;
 };
 
 
 struct ast_file {
-    struct vector sections;
+    struct ast_section *sections;
+    size_t sec_n;
 };
 
 
@@ -27,11 +26,13 @@ enum ast_section_kind {
 };
 
 struct ast_data_section {
-    struct vector data_stmts;
+    struct ast_data_stmt *data_stmts;
+    size_t stmts_c;
 };
 
 struct ast_exec_section {
-    struct vector exec_stmts;
+    struct ast_exec_stmt *exec_stmts;
+    size_t stmts_c;
 };
 
 struct ast_section {
@@ -50,13 +51,18 @@ enum ast_initializer_kind {
     AST_INIT_BYTE_INIT
 };
 
+struct ast_byte_init {
+    struct ast_terminal *numbers;
+    size_t num_c;
+};
+
 struct ast_initializer {
     enum ast_initializer_kind kind;
 
     union {
         struct ast_terminal number;
         struct ast_terminal ascii;
-        struct vector byte_init;
+        struct ast_byte_init byte_init;
     };
 };
 
@@ -95,16 +101,16 @@ struct ast_data_stmt {
 
 struct ast_instruction_stmt {
     struct ast_terminal instr;
-    bool is_conditional;
     struct ast_terminal condition_code;
-    struct vector args;
+    struct ast_arg *args;
+    size_t args_c;
 };
 
 struct ast_macro_stmt {
     struct ast_terminal instr;
-    bool is_conditional;
     struct ast_terminal condition_code;
-    struct vector args;
+    struct ast_arg *args;
+    size_t args_c;
 };
 
 struct ast_loc_label_stmt {
@@ -167,7 +173,7 @@ struct ast_arg {
 };
 
 
-void ast_terminal_deinit(struct ast_terminal *node);
+
 void ast_file_deinit(struct ast_file *node);
 void ast_data_section_deinit(struct ast_data_section *node);
 void ast_exec_section_deinit(struct ast_exec_section *node);
@@ -175,17 +181,14 @@ void ast_section_deinit(struct ast_section *node);
 void ast_initializer_deinit(struct ast_initializer *node);
 void ast_byte_stmt_deinit(struct ast_byte_stmt *node);
 void ast_bytes_stmt_deinit(struct ast_bytes_stmt *node);
-void ast_label_stmt_deinit(struct ast_label_stmt *node);
 void ast_data_stmt_deinit(struct ast_data_stmt *node);
 void ast_instruction_stmt_deinit(struct ast_instruction_stmt *node);
 void ast_macro_stmt_deinit(struct ast_macro_stmt *node);
-void ast_loc_label_stmt_deinit(struct ast_loc_label_stmt *node);
 void ast_exec_stmt_deinit(struct ast_exec_stmt *node);
-void ast_loc_label_deinit(struct ast_loc_label *node);
-void ast_arg_deinit(struct ast_arg *node);
-void numbers_deinit(void *p);
 
-void _ast_terminal_deinit(void *node);
+
+
+
 void _ast_file_deinit(void *node);
 void _ast_data_section_deinit(void *node);
 void _ast_exec_section_deinit(void *node);
@@ -193,14 +196,12 @@ void _ast_section_deinit(void *node);
 void _ast_initializer_deinit(void *node);
 void _ast_byte_stmt_deinit(void *node);
 void _ast_bytes_stmt_deinit(void *node);
-void _ast_label_stmt_deinit(void *node);
 void _ast_data_stmt_deinit(void *node);
 void _ast_instruction_stmt_deinit(void *node);
 void _ast_macro_stmt_deinit(void *node);
-void _ast_loc_label_stmt_deinit(void *node);
 void _ast_exec_stmt_deinit(void *node);
-void _ast_loc_label_deinit(void *node);
-void _ast_arg_deinit(void *node);
+
+
 
 /*
 void null_ast_terminal(struct ast_terminal *node);

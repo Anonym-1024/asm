@@ -3,7 +3,7 @@
 
 #include <ctype.h>
 #include "lexer_resources.h"
-#include "libs/utilities/utilities.h"
+#include "libs/hashmap/hashmap.h"
 #include "libs/error_handling.h"
 
 
@@ -18,8 +18,21 @@ struct lexer_context {
     size_t start_col;
 
     struct vector buffer; //! Owned
+    bool _buffer;
 
     char *error_msg;
+
+    struct hashmap dir_map;
+    struct hashmap instr_map;
+    struct hashmap macro_map;
+    struct hashmap reg_map;
+    struct hashmap sys_reg_map;
+    struct hashmap addr_reg_map;
+    struct hashmap port_map;
+    struct hashmap data_unit_map;
+    struct hashmap punct_map;
+    struct hashmap cond_code_map;
+    
 };
 
 
@@ -53,7 +66,7 @@ static bool is_whitespace_char(char c) {
 }
 
 static bool is_punctuation_char(char c) {
-    return (c == ',') || (c == '{') || (c == '}') || (c == '[') || (c == ']') || (c == ':') || (c == '(') || (c == ')') || (c == '#');
+    return (c == ',') || (c == '{') || (c == '}') || (c == ':') || (c == '(') || (c == ')') || (c == '#');
 }
 
 
@@ -75,7 +88,7 @@ static void pop_char(struct lexer_context *ctx) {
 }
 
 
-enum lexer_result add_token(struct lexer_context *ctx, enum token_kind kind) {
+enum lexer_result add_lexical_token(struct lexer_context *ctx, enum token_kind kind) {
     
 
     struct token t;
@@ -88,15 +101,14 @@ enum lexer_result add_token(struct lexer_context *ctx, enum token_kind kind) {
 
     
     try_else(vec_push(&ctx->out, &t), VEC_OK, goto _error);
-    
-    try_else(vec_init(&ctx->buffer, 10, sizeof(char)), VEC_OK, goto _error);
+    ctx->_buffer = false;
+    try_else(vec_init(&ctx->buffer, 6, sizeof(char)), VEC_OK, goto _error);
+    ctx->_buffer = true;
 
     return LEX_OK;
 
 
 _error:
-    
-    asprintf(&ctx->error_msg, "Memory error.");
     return LEX_ERR;
 
 }
@@ -115,16 +127,17 @@ static enum lexer_result read_comment(struct lexer_context *ctx) {
 static enum lexer_result read_new_line(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
 
-    char c = '\n';
-    try_else(vec_push(&ctx->buffer, &c), VEC_OK, goto _error);
+    
+    struct token t = {
+        .kind = TOKEN_PUNCT,
+        .line = ctx->line,
+        .col = ctx->start_col,
+        .punct = PUNCT_NEWLINE
+    };
 
-    char term = 0;
-    try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
-
-    try_else(add_token(ctx, TOKEN_PUNCT), LEX_OK, goto _error);
+    try_else(vec_push(&ctx->out, &t), VEC_OK, goto _error);
     
     pop_char(ctx);
-
     ctx->col = 1;
     ctx->line += 1;
     
@@ -132,7 +145,6 @@ static enum lexer_result read_new_line(struct lexer_context *ctx) {
 
 _error:
 
-    asprintf(&ctx->error_msg, "Memory error.");
     return LEX_ERR;
 }
 
@@ -152,24 +164,26 @@ static enum lexer_result read_punctuation(struct lexer_context *ctx, char c) {
     char term = 0;
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
 
-    try_else(add_token(ctx, TOKEN_PUNCT), LEX_OK, goto _error);
+    enum punctuation_token p;
+    hashmap_get(&ctx->punct_map, ctx->buffer.ptr, (int*)&p);
+
+    struct token t = {
+        .kind = TOKEN_PUNCT,
+        .line = ctx->line,
+        .col = ctx->start_col,
+        .punct = p
+    };
+
+    try_else(vec_push(&ctx->out, &t), VEC_OK, goto _error);
+    vec_empty(&ctx->buffer);
     return LEX_OK;
 
 
 _error:
-    asprintf(&ctx->error_msg, "Memory error.");
     return LEX_ERR;
 }
 
 
-static bool is_directive(char *s) {
-    for (int i = 0; i < directives_count; i++) {
-        if (strcmp(s, directives[i]) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
 
 static enum lexer_result read_directive(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
@@ -188,12 +202,22 @@ static enum lexer_result read_directive(struct lexer_context *ctx) {
     char term = 0;
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
 
-    if (!is_directive(ctx->buffer.ptr)) {
-        asprintf(&ctx->error_msg, "'%s' is not a directive.", (char*)ctx->buffer.ptr);
-        return LEX_ERR;
+
+
+    enum directive_token d;
+    if (hashmap_get(&ctx->dir_map, ctx->buffer.ptr, (int*)&d) != HMAP_OK) {
+        asprintf(&ctx->error_msg, "'%s' is not a valid directive.", (char*)ctx->buffer.ptr);
     }
 
-    try_else(add_token(ctx, TOKEN_DIR), LEX_OK, goto _error);
+    struct token t = {
+        .kind = TOKEN_DIR,
+        .line = ctx->line,
+        .col = ctx->start_col,
+        .dir = d
+    };
+
+    try_else(vec_push(&ctx->out, &t), VEC_OK, goto _error);
+    vec_empty(&ctx->buffer);
 
     return LEX_OK;
 
@@ -202,15 +226,6 @@ _error:
     return LEX_ERR;
 }
 
-
-static bool is_macro(char *s) {
-    for (int i = 0; i < macros_count; i++) {
-        if (strcmp(s, macros[i]) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
 
 static enum lexer_result read_macro(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
@@ -229,12 +244,20 @@ static enum lexer_result read_macro(struct lexer_context *ctx) {
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
 
 
-    if (!is_macro(ctx->buffer.ptr)) {
-        asprintf(&ctx->error_msg, "'%s' is not a macro", (char*)ctx->buffer.ptr);
-        return LEX_ERR;
+    enum macro_token m;
+    if (hashmap_get(&ctx->macro_map, ctx->buffer.ptr, (int*)&m) != HMAP_OK) {
+        asprintf(&ctx->error_msg, "'%s' is not a valid macro.", (char*)ctx->buffer.ptr);
     }
 
-    try_else(add_token(ctx, TOKEN_MACRO), LEX_OK, goto _error);
+    struct token t = {
+        .kind = TOKEN_MACRO,
+        .line = ctx->line,
+        .col = ctx->start_col,
+        .macro = m
+    };
+
+    try_else(vec_push(&ctx->out, &t), VEC_OK, goto _error);
+    vec_empty(&ctx->buffer);
 
     return LEX_OK;
 
@@ -243,89 +266,19 @@ _error:
     return LEX_ERR;
 }
 
-static bool is_instruction(const char *s) {
-    for (int i = 0; i < instructions_count; i++) {
-        if (strcmp(s, instructions[i]) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool is_data_unit(const char *s) {
-    for (int i = 0; i < data_units_count; i++) {
-        if (strcmp(s, data_units[i]) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool is_register(const char *s) {
-    for (int i = 0; i < registers_count; i++) {
-        if (strcmp(s, registers[i]) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool is_address_register(const char *s) {
-    for (int i = 0; i < address_registers_count; i++) {
-        if (strcmp(s, address_registers[i]) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool is_condition_code(const char *s) {
-    for (int i = 0; i < condition_codes_count; i++) {
-        if (strcmp(s, condition_codes[i]) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool is_system_register(const char *s){
-    for (int i = 0; i < system_registers_count; i++) {
-        if (strcmp(s, system_registers[i]) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool is_port(const char *s){
-    for (int i = 0; i < ports_count; i++) {
-        if (strcmp(s, ports[i]) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
 
 
-static enum token_kind get_word_kind(const char *s) {
-    if (is_instruction(s)) {
-        return TOKEN_INSTR;
-    } else if (is_data_unit(s)) {
-        return TOKEN_DATA_UNIT;
-    } else if (is_register(s)) {
-        return TOKEN_REG;
-    } else if (is_address_register(s)) {
-        return TOKEN_ADDR_REG;
-    } else if (is_port(s)) {
-        return TOKEN_PORT;
-    } else if (is_system_register(s)) {
-        return TOKEN_SYS_REG;
-    } else if (is_condition_code(s)) {
-        return TOKEN_COND_CODE;
-    } else {
-        return TOKEN_IDENT;
-    }
-}
+
+
+
+
+
+
+
+
+
+
+
 
 static enum lexer_result read_word(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
@@ -337,10 +290,45 @@ static enum lexer_result read_word(struct lexer_context *ctx) {
     char term = 0;
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
 
-    enum token_kind kind = get_word_kind(ctx->buffer.ptr);
     
 
-    try_else(add_token(ctx, kind), LEX_OK, goto _error);
+    struct token t = {
+        .line = ctx->line,
+        .col = ctx->start_col
+    };
+    unsigned int x;
+    
+    if (hashmap_get(&ctx->instr_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+        t.kind = TOKEN_INSTR;
+        t.instr = x;
+    } else if (hashmap_get(&ctx->reg_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+        t.kind = TOKEN_REG;
+        t.reg = x;
+    } else if (hashmap_get(&ctx->sys_reg_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+        t.kind = TOKEN_SYS_REG;
+        t.sys_reg = x;
+    } else if (hashmap_get(&ctx->addr_reg_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+        t.kind = TOKEN_ADDR_REG;
+        t.addr_reg = x;
+    } else if (hashmap_get(&ctx->port_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+        t.kind = TOKEN_PORT;
+        t.port = x;
+    } else if (hashmap_get(&ctx->data_unit_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+        t.kind = TOKEN_DATA_UNIT;
+        t.data_unit = x;
+    } else if (hashmap_get(&ctx->cond_code_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+        t.kind = TOKEN_COND_CODE;
+        t.cond_code = x;
+    } else {
+        t.kind = TOKEN_IDENT;
+        try_else(add_lexical_token(ctx, TOKEN_IDENT), LEX_OK, goto _error);
+        return LEX_OK;
+    }
+
+   
+
+    try_else(vec_push(&ctx->out, &t), VEC_OK, goto _error);
+    vec_empty(&ctx->buffer);
 
     return LEX_OK;
 
@@ -372,12 +360,12 @@ static enum lexer_result read_ascii(struct lexer_context *ctx) {
     char term = 0;
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
 
-    try_else(add_token(ctx, TOKEN_ASCII), LEX_OK, goto _error);
+    try_else(add_lexical_token(ctx, TOKEN_ASCII), LEX_OK, goto _error);
 
     return LEX_OK;
 
 _error:
-    asprintf(&ctx->error_msg, "Memory error.");
+    
     return LEX_ERR;
 
 }
@@ -404,29 +392,259 @@ static enum lexer_result read_number(struct lexer_context *ctx) {
     char term = 0;
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
 
-    try_else(add_token(ctx, TOKEN_NUM), LEX_OK, goto _error);
+    try_else(add_lexical_token(ctx, TOKEN_NUM), LEX_OK, goto _error);
 
 
 
     return LEX_OK;
 
 _error:
-    asprintf(&ctx->error_msg, "Memory error.");
+    
     return LEX_ERR;
 }
 
 
 
-void token_deinit(struct token *ptr) {
-    free(ptr->lexeme);
+static enum lexer_result make_hash_maps(struct lexer_context *ctx) {
+
+    bool _dir_map = false;
+    bool _instr_map = false;
+    bool _macro_map = false;
+    bool _reg_map = false;
+    bool _sys_reg_map = false;
+    bool _addr_reg_map = false;
+    bool _port_map = false;
+    bool _data_unit_map = false;
+    bool _cond_code_map = false;
+    bool _punct_map = false;
+
+    /* INSTRUCTIONS */
+
+    try_else(hashmap_init(&ctx->instr_map, 128), HMAP_OK, goto _error);
+    _instr_map = true;
+
+    try_else(hashmap_add(&ctx->instr_map, "mov", INSTR_MOV), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "movs", INSTR_MOVS), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "mvn", INSTR_MVN), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "mvns", INSTR_MVNS), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "srw", INSTR_SRW), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "srr", INSTR_SRR), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "ldr", INSTR_LDR), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "ldro", INSTR_LDRO), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "ldri", INSTR_LDRI), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "str", INSTR_STR), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "stro", INSTR_STRO), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "stri", INSTR_STRI), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "add", INSTR_ADD), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "adds", INSTR_ADDS), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "addc", INSTR_ADDC), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "addcs", INSTR_ADDCS), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "sub", INSTR_SUB), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "subs", INSTR_SUBS), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "subc", INSTR_SUBC), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "subcs", INSTR_SUBCS), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "and", INSTR_AND), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "ands", INSTR_ANDS), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "or", INSTR_OR), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "ors", INSTR_ORS), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "eor", INSTR_EOR), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "eors", INSTR_EORS), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "lsl", INSTR_LSL), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "lsls", INSTR_LSLS), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "lsr", INSTR_LSR), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "lsrs", INSTR_LSRS), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "asr", INSTR_ASR), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "asrs", INSTR_ASRS), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "cls", INSTR_CLS), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "csls", INSTR_CSLS), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "csr", INSTR_CSR), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "csrs", INSTR_CSRS), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "cmn", INSTR_CMN), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "addcd", INSTR_ADDCD), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "cmp", INSTR_CMP), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "subcd", INSTR_SUBCD), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "andd", INSTR_ANDD), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "ord", INSTR_ORD), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "eord", INSTR_EORD), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "lsld", INSTR_LSLD), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "lsrd", INSTR_LSRD), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "asrd", INSTR_ASRD), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "csld", INSTR_CSLD), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "csrd", INSTR_CSRD), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "ba", INSTR_BA), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "bal", INSTR_BAL), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "br", INSTR_BR), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "brl", INSTR_BRL), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "ptr", INSTR_PTR), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "ptw", INSTR_PTW), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->instr_map, "ptsr", INSTR_PTSR), HMAP_OK, goto _error);
+
+    try_else(hashmap_add(&ctx->instr_map, "svc", INSTR_SVC), HMAP_OK, goto _error);
+
+    /* MACROS */
+
+    try_else(hashmap_init(&ctx->macro_map, 16), HMAP_OK, goto _error);
+    _macro_map = true;
+
+    try_else(hashmap_add(&ctx->macro_map, "!b", MACRO_B), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->macro_map, "!bl", MACRO_BL), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->macro_map, "!movl", MACRO_MOVL), HMAP_OK, goto _error);
+
+    /* DIRECTIVES */
+
+    try_else(hashmap_init(&ctx->dir_map, 16), HMAP_OK, goto _error);
+    _dir_map = true;
+
+    try_else(hashmap_add(&ctx->dir_map, ".DATA", DIR_DATA), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->dir_map, ".EXEC", DIR_EXEC), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->dir_map, ".start", DIR_START), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->dir_map, ".l", DIR_L), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->dir_map, ".b", DIR_B), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->dir_map, ".f", DIR_F), HMAP_OK, goto _error);
+
+    /* REGISTERS */
+
+    try_else(hashmap_init(&ctx->reg_map, 32), HMAP_OK, goto _error);
+    _reg_map = true;
+
+    try_else(hashmap_add(&ctx->reg_map, "r0", REG_R0), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r1", REG_R1), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r2", REG_R2), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r3", REG_R3), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r4", REG_R4), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r5", REG_R5), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r6", REG_R6), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r7", REG_R7), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r8", REG_R8), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r9", REG_R9), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r10", REG_R10), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r11", REG_R11), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r12", REG_R12), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r13", REG_R13), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r14", REG_R14), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->reg_map, "r15", REG_R15), HMAP_OK, goto _error);
+
+
+
+    try_else(hashmap_init(&ctx->cond_code_map, 32), HMAP_OK, goto _error);
+    _cond_code_map = true;
+
+    try_else(hashmap_add(&ctx->cond_code_map, "al", COND_AL), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "eq", COND_EQ), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "zs", COND_ZS), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "mi", COND_MI), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "vs", COND_VS), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "su", COND_SU), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "cc", COND_CC), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "gu", COND_GU), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "ss", COND_SS), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "gs", COND_GS), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "ne", COND_NE), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "zc", COND_ZC), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "pl", COND_PL), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "vc", COND_VC), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "geu", COND_GEU), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "cs", COND_CS), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "seu", COND_SEU), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "ges", COND_GES), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->cond_code_map, "ses", COND_SES), HMAP_OK, goto _error);
+
+    try_else(hashmap_init(&ctx->addr_reg_map, 32), HMAP_OK, goto _error);
+    _addr_reg_map = true;
+
+    try_else(hashmap_add(&ctx->addr_reg_map, "r0a", ADDR_REG_R0A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r1a", ADDR_REG_R1A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r2a", ADDR_REG_R2A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r3a", ADDR_REG_R3A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r4a", ADDR_REG_R4A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r5a", ADDR_REG_R5A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r6a", ADDR_REG_R6A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r7a", ADDR_REG_R7A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r8a", ADDR_REG_R8A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r9a", ADDR_REG_R9A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r10a", ADDR_REG_R10A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r11a", ADDR_REG_R11A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r12a", ADDR_REG_R12A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r13a", ADDR_REG_R13A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r14a", ADDR_REG_R14A), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->addr_reg_map, "r15a", ADDR_REG_R15A), HMAP_OK, goto _error);
+
+
+    try_else(hashmap_init(&ctx->sys_reg_map, 16), HMAP_OK, goto _error);
+    _sys_reg_map = true;
+
+    try_else(hashmap_add(&ctx->sys_reg_map, "pc_b0", SYS_REG_PC_B0), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->sys_reg_map, "pc_b1", SYS_REG_PC_B1), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->sys_reg_map, "psr", SYS_REG_PSR), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->sys_reg_map, "intr", SYS_REG_INTR), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->sys_reg_map, "pdbr_b0", SYS_REG_PDBR_B0), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->sys_reg_map, "pdbr_b1", SYS_REG_PDBR_B1), HMAP_OK, goto _error)
+
+
+    try_else(hashmap_init(&ctx->port_map, 16), HMAP_OK, goto _error);
+    _port_map = true;
+
+    try_else(hashmap_add(&ctx->port_map, "p0", PORT_P0), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->port_map, "p1", PORT_P1), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->port_map, "p2", PORT_P2), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->port_map, "p3", PORT_P3), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->port_map, "p4", PORT_P4), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->port_map, "p5", PORT_P5), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->port_map, "p6", PORT_P6), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->port_map, "p7", PORT_P7), HMAP_OK, goto _error);
+
+    try_else(hashmap_init(&ctx->punct_map, 16), HMAP_OK, goto _error);
+    _punct_map = true;
+
+    try_else(hashmap_add(&ctx->punct_map, ",", PUNCT_COMMA), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->punct_map, ":", PUNCT_SEMICOLON), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->punct_map, "{", PUNCT_LBRACE), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->punct_map, "}", PUNCT_RBRACE), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->punct_map, "(", PUNCT_LPAR), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->punct_map, ")", PUNCT_RPAR), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->punct_map, "#", PUNCT_HASH), HMAP_OK, goto _error);
+
+    try_else(hashmap_init(&ctx->data_unit_map, 4), HMAP_OK, goto _error);
+    _punct_map = true;
+
+    try_else(hashmap_add(&ctx->data_unit_map, "byte", DATA_BYTE), HMAP_OK, goto _error);
+    try_else(hashmap_add(&ctx->data_unit_map, "bytes", DATA_BYTES), HMAP_OK, goto _error);
+    
+    
+
+    return LEX_OK;
+
+_error:
+
+    if (_punct_map) hashmap_deinit(&ctx->punct_map);
+    if (_cond_code_map) hashmap_deinit(&ctx->cond_code_map);
+    if (_data_unit_map) hashmap_deinit(&ctx->data_unit_map);
+    if (_port_map) hashmap_deinit(&ctx->port_map);
+    if (_addr_reg_map) hashmap_deinit(&ctx->addr_reg_map);
+    if (_sys_reg_map) hashmap_deinit(&ctx->sys_reg_map);
+    if (_reg_map) hashmap_deinit(&ctx->reg_map);
+    if (_macro_map) hashmap_deinit(&ctx->macro_map);
+    if (_instr_map) hashmap_deinit(&ctx->instr_map);
+    if (_dir_map) hashmap_deinit(&ctx->dir_map);
+
+    return LEX_ERR;
 }
 
-void _token_deinit(void *ptr) {
-    token_deinit(ptr);
-}
-
-
-enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct compiler_error *error) {
+enum lexer_result tokenise(const char *in, size_t n, struct token **out, size_t *out_n, struct compiler_error *error) {
 
     
     struct lexer_context ctx = {
@@ -439,15 +657,18 @@ enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct 
         .start_col = 1,
 
         .error_msg = NULL,
-
-        .buffer = null_vector(),
-        .out = null_vector()
+        ._buffer = false
     }; 
-    char *eof_lexeme = NULL;
+
+    bool _out = false;
+    
+    try_else(make_hash_maps(&ctx), LEX_OK, goto _error);
     
 
-    try_else(vec_init(&ctx.buffer, 10, sizeof(char)), VEC_OK, goto _error);
+    try_else(vec_init(&ctx.buffer, 6, sizeof(char)), VEC_OK, goto _error);
+    ctx._buffer = true;
     try_else(vec_init(&ctx.out, 100, sizeof(struct token)), VEC_OK, goto _error);
+    _out = true;
 
 
     char c;
@@ -491,27 +712,37 @@ enum lexer_result tokenise(const char *in, size_t n, struct vector *out, struct 
         .kind = TOKEN_EOF,
         .line = ctx.line,
         .col = ctx.col,
-        .lexeme = eof_lexeme
+        .lexeme = NULL
     };
-    if ((eof.lexeme = malloc(sizeof(char) * 1)) == NULL) {
-        goto _error;
-    }
-    strcpy(eof.lexeme, "");
 
     try_else(vec_push(&ctx.out, &eof), VEC_OK, goto _error);
 
 
-    *out = ctx.out;
+    *out = ctx.out.ptr;
+    *out_n = ctx.out.length;
 
     vec_deinit(&ctx.buffer, NULL);
+
+    hashmap_deinit(&ctx.punct_map);
+    hashmap_deinit(&ctx.cond_code_map);
+    hashmap_deinit(&ctx.data_unit_map);
+    hashmap_deinit(&ctx.port_map);
+    hashmap_deinit(&ctx.addr_reg_map);
+    hashmap_deinit(&ctx.sys_reg_map);
+    hashmap_deinit(&ctx.reg_map);
+    hashmap_deinit(&ctx.macro_map);
+    hashmap_deinit(&ctx.instr_map);
+    hashmap_deinit(&ctx.dir_map);
+
 
     return LEX_OK;
 
 _error:
     
-    *out = null_vector();
-    vec_deinit(&ctx.buffer, NULL);
-    vec_deinit(&ctx.out, &_token_deinit);
+    *out = NULL;
+    *out_n = 0;
+    if (ctx._buffer) vec_deinit(&ctx.buffer, NULL);
+    if (_out) vec_deinit(&ctx.out, &_token_deinit);
 
 
     if (ctx.error_msg == NULL) {
@@ -521,6 +752,19 @@ _error:
     error->col = ctx.start_col;
     error->kind = LEXER_ERROR;
     error->msg = ctx.error_msg;
+
+    hashmap_deinit(&ctx.punct_map);
+    hashmap_deinit(&ctx.cond_code_map);
+    hashmap_deinit(&ctx.data_unit_map);
+    hashmap_deinit(&ctx.port_map);
+    hashmap_deinit(&ctx.addr_reg_map);
+    hashmap_deinit(&ctx.sys_reg_map);
+    hashmap_deinit(&ctx.reg_map);
+    hashmap_deinit(&ctx.macro_map);
+    hashmap_deinit(&ctx.instr_map);
+    hashmap_deinit(&ctx.dir_map);
+
+
     return LEX_ERR;
 }
 

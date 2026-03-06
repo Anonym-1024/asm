@@ -26,7 +26,7 @@ enum parser_result {
 
 enum parser_result parse_file(struct parser_context *ctx, struct ast_file *file);
 
-enum parser_result parse_sections(struct parser_context *ctx, struct vector *sections);
+enum parser_result parse_sections(struct parser_context *ctx, struct ast_section **sections, size_t *sec_c);
 
 enum parser_result parse_section(struct parser_context *ctx, struct ast_section *section);
 
@@ -34,7 +34,7 @@ enum parser_result parse_data_section(struct parser_context *ctx, struct ast_dat
 
 enum parser_result parse_data_dir(struct parser_context *ctx);
 
-enum parser_result parse_data_stmts(struct parser_context *ctx, struct vector *stmts);
+enum parser_result parse_data_stmts(struct parser_context *ctx, struct ast_data_stmt **stmts, size_t *stmt_c);
 
 enum parser_result parse_data_stmt(struct parser_context *ctx, struct ast_data_stmt *stmt);
 
@@ -46,15 +46,15 @@ enum parser_result parse_label_stmt(struct parser_context *ctx, struct ast_label
 
 enum parser_result parse_initializer(struct parser_context *ctx, struct ast_initializer *init);
 
-enum parser_result parse_byte_initializer(struct parser_context *ctx, struct vector *byte_init);
+enum parser_result parse_byte_initializer(struct parser_context *ctx, struct ast_byte_init *byte_init);
 
-enum parser_result parse_numbers(struct parser_context *ctx, struct vector *numbers);
+enum parser_result parse_numbers(struct parser_context *ctx, struct ast_terminal **numbers, size_t *byte_c);
 
 enum parser_result parse_exec_section(struct parser_context *ctx, struct ast_exec_section *section);
 
 enum parser_result parse_exec_dir(struct parser_context *ctx);
 
-enum parser_result parse_exec_stmts(struct parser_context *ctx, struct vector *stmts);
+enum parser_result parse_exec_stmts(struct parser_context *ctx, struct ast_exec_stmt **stmts, size_t *stmt_c);
 
 enum parser_result parse_exec_stmt(struct parser_context *ctx, struct ast_exec_stmt *stmt);
 
@@ -64,7 +64,7 @@ enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct ast
 
 enum parser_result parse_condition_code(struct parser_context *ctx, struct ast_terminal *cond);
 
-enum parser_result parse_args(struct parser_context *ctx, struct vector *args);
+enum parser_result parse_args(struct parser_context *ctx, struct ast_arg **args, size_t *arg_c);
 
 enum parser_result parse_arg(struct parser_context *ctx, struct ast_arg *arg);
 

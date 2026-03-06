@@ -24,7 +24,6 @@ static u_int64_t shash_64fnv(const char *str) {
 
 
 enum hashset_result hashset_init(struct hashset *hm, size_t size) {
-    
     hm->size = size;
     hm->table = malloc(sizeof(struct hashset_item*) * size);
     if (hm->table == NULL) {
@@ -48,7 +47,6 @@ enum hashset_result hashset_add(struct hashset *hm, const char *key) {
 
     while (item != NULL) {
         if (strcmp(item->key, key) == 0) {
-            
             return HMAP_OK;
         }
         item = item->next;
@@ -75,22 +73,7 @@ enum hashset_result hashset_add(struct hashset *hm, const char *key) {
 
 }
 
-enum hashset_result hashset_get(const struct hashset *hm, const char *key) {
-    struct hashset_item *item = hm->table[get_index(hm, key)];
 
-    
-
-    while (item != NULL) {
-        if (strcmp(key, item->key) == 0) {
-            return HMAP_OK;
-        }
-        item = item->next;
-    }
-
-    return HMAP_NO_ENTRY;
-
-
-}
 
 enum hashset_result hashset_find(const struct hashset *hm, const char *key) {
     struct hashset_item *item = hm->table[get_index(hm, key)];
@@ -99,7 +82,7 @@ enum hashset_result hashset_find(const struct hashset *hm, const char *key) {
 
     while (item != NULL) {
         if (strcmp(key, item->key) == 0) {
-            return HMAP_FOUND;
+            return HMAP_OK;
         }
         item = item->next;
     }

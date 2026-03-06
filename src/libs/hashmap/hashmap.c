@@ -23,10 +23,9 @@ static u_int64_t shash_64fnv(const char *str) {
 
 
 
-enum hashmap_result hashmap_init(struct hashmap *hm, size_t size, size_t value_size, void (*deinit)(void *value)) {
-    hm->deinit = deinit;
+enum hashmap_result hashmap_init(struct hashmap *hm, size_t size) {
+    
     hm->size = size;
-    hm->value_size = value_size;
     hm->table = malloc(sizeof(struct hashmap_item*) * size);
     if (hm->table == NULL) {
         return HMAP_MEM_ERR;
@@ -43,16 +42,14 @@ static size_t get_index(const struct hashmap *hm, const char *key) {
     return hash % hm->size;
 }
 
-enum hashmap_result hashmap_add(struct hashmap *hm, const char *key, const void *value) {
+enum hashmap_result hashmap_add(struct hashmap *hm, const char *key, int value) {
     size_t index = get_index(hm, key);
     struct hashmap_item *item = hm->table[index];
 
     while (item != NULL) {
         if (strcmp(item->key, key) == 0) {
-            if (hm->deinit != NULL) {
-                hm->deinit(item->value);
-            }
-            memcpy(item->value, value, hm->value_size);
+            
+            item->value = value;
             return HMAP_OK;
         }
         item = item->next;
@@ -70,14 +67,9 @@ enum hashmap_result hashmap_add(struct hashmap *hm, const char *key, const void 
     }
     strcpy(new_item->key, key);
 
-    new_item->value = malloc(hm->value_size);
-    if (new_item->value == NULL) {
-        free(new_item->key);
-        free(new_item);
-        return HMAP_MEM_ERR;
-    }
+    
 
-    memcpy(new_item->value, value, hm->value_size);
+    new_item->value = value;
 
     new_item->next = hm->table[index];
     hm->table[index] = new_item;
@@ -86,14 +78,14 @@ enum hashmap_result hashmap_add(struct hashmap *hm, const char *key, const void 
 
 }
 
-enum hashmap_result hashmap_get(const struct hashmap *hm, const char *key, void *value) {
+enum hashmap_result hashmap_get(const struct hashmap *hm, const char *key, int *value) {
     struct hashmap_item *item = hm->table[get_index(hm, key)];
 
     
 
     while (item != NULL) {
         if (strcmp(key, item->key) == 0) {
-            memcpy(value, item->value, hm->value_size);
+            *value = item->value;
             return HMAP_OK;
         }
         item = item->next;
@@ -111,7 +103,7 @@ enum hashmap_result hashmap_find(const struct hashmap *hm, const char *key) {
 
     while (item != NULL) {
         if (strcmp(key, item->key) == 0) {
-            return HMAP_FOUND;
+            return HMAP_OK;
         }
         item = item->next;
     }
@@ -130,10 +122,7 @@ enum hashmap_result hashmap_remove(struct hashmap *hm, const char *key) {
             struct hashmap_item *tmp = (*item)->next;
             
             free((*item)->key);
-            if (hm->deinit != NULL) {
-                hm->deinit((*item)->value);
-            }
-            free((*item)->value);
+            
             free(*item);
             *item = tmp;
             return HMAP_OK;
@@ -150,11 +139,11 @@ void hashmap_item_deinit(struct hashmap_item *item) {
         free(item->next);
     }
     free(item->key);
-    free(item->value);
+    
 }
 
 void hashmap_deinit(struct hashmap *hm) {
-        struct hashmap_item *item;
+    struct hashmap_item *item;
     for (size_t i = 0; i < hm->size; i++) {
         item = hm->table[i];
         if (item != NULL) {
