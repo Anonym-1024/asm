@@ -1,7 +1,7 @@
 NAME=a.out
 
 CC      := clang
-CFLAGS  := -Wall -O3 -Wextra -MMD -MP -Isrc -std=c11 
+CFLAGS  := -O3 -MMD -MP -Isrc -std=c11
 
 SRC_DIR := src
 OBJ_DIR := build

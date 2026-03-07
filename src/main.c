@@ -19,11 +19,11 @@ int main(void) {
 
     
     
-    FILE *f = fopen("resources/example copy.asm", "r");
+    FILE *f = fopen("resources/b.txt", "r");
 
     
 
-    off_t s = get_file_size("resources/example copy.asm");
+    off_t s = get_file_size("resources/b.txt");
 
     char *in = malloc(sizeof(char) * s);
     fread(in, sizeof(char), s, f);
@@ -37,7 +37,9 @@ int main(void) {
     
     enum lexer_result c = tokenise(in, s, &out, &cc, &err);
     free(in);
-
+    printf("Lexer done");
+    fflush(stdout);
+    sleep(10);
     if (c == LEX_ERR) {
         
         print_compiler_error(stdout, &err);
@@ -60,7 +62,7 @@ int main(void) {
         
         
         printf("Hura");
-        sleep(10);
+        
         ast_file_deinit(&file);
     } else {
         print_compiler_error(stdout, &err);

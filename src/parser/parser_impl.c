@@ -221,7 +221,7 @@ enum parser_result parse_data_dir(struct parser_context *ctx) {
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "Expected '\\n'");
+        asprintf(&ctx->error_msg, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -352,7 +352,7 @@ enum parser_result parse_byte_stmt(struct parser_context *ctx, struct ast_byte_s
     }
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "Expected '\\n'");
+        asprintf(&ctx->error_msg, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -409,7 +409,7 @@ enum parser_result parse_bytes_stmt(struct parser_context *ctx, struct ast_bytes
     }
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "Expected '\\n'");
+        asprintf(&ctx->error_msg, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -444,7 +444,7 @@ enum parser_result parse_label_stmt(struct parser_context *ctx, struct ast_label
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "Expected '\\n'");
+        asprintf(&ctx->error_msg, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -609,7 +609,7 @@ enum parser_result parse_exec_dir(struct parser_context *ctx) {
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "Expected '\\n'");
+        asprintf(&ctx->error_msg, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -725,7 +725,7 @@ enum parser_result parse_start_stmt(struct parser_context *ctx) {
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "Expected '\\n'");
+        asprintf(&ctx->error_msg, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -762,7 +762,7 @@ enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct ast
     _args = true;
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "Expected '\\n'");
+        asprintf(&ctx->error_msg, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -1079,7 +1079,7 @@ enum parser_result parse_macro_stmt(struct parser_context *ctx, struct ast_macro
     
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "Expected '\\n'");
+        asprintf(&ctx->error_msg, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -1116,7 +1116,7 @@ enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct ast_l
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "Expected '\\n'");
+        asprintf(&ctx->error_msg, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);

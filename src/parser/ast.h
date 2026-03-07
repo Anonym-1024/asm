@@ -72,9 +72,9 @@ struct ast_byte_stmt {
 };
 
 struct ast_bytes_stmt {
-    bool is_initialized;
     struct ast_initializer init;
     struct ast_terminal len;
+    bool is_initialized;
 };
 
 struct ast_label_stmt {
@@ -134,6 +134,9 @@ struct ast_exec_stmt {
         struct ast_loc_label_stmt loc_label_stmt;
     };
 };
+
+
+
 
 
 

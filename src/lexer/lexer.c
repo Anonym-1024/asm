@@ -100,16 +100,15 @@ enum lexer_result add_lexical_token(struct lexer_context *ctx, enum token_kind k
     
 
     
-    try_else(vec_push(&ctx->out, &t), VEC_OK, goto _error);
+    try_else(vec_push(&ctx->out, &t), VEC_OK, return LEX_ERR);
     ctx->_buffer = false;
-    try_else(vec_init(&ctx->buffer, 6, sizeof(char)), VEC_OK, goto _error);
+    try_else(vec_init(&ctx->buffer, 6, sizeof(char)), VEC_OK, return LEX_ERR);
     ctx->_buffer = true;
 
     return LEX_OK;
 
 
-_error:
-    return LEX_ERR;
+
 
 }
 
@@ -135,7 +134,7 @@ static enum lexer_result read_new_line(struct lexer_context *ctx) {
         .punct = PUNCT_NEWLINE
     };
 
-    try_else(vec_push(&ctx->out, &t), VEC_OK, goto _error);
+    try_else(vec_push(&ctx->out, &t), VEC_OK, return LEX_ERR);
     
     pop_char(ctx);
     ctx->col = 1;
@@ -143,9 +142,7 @@ static enum lexer_result read_new_line(struct lexer_context *ctx) {
     
     return LEX_OK;
 
-_error:
 
-    return LEX_ERR;
 }
 
 
@@ -158,11 +155,11 @@ static enum lexer_result read_whitespace(struct lexer_context *ctx) {
 static enum lexer_result read_punctuation(struct lexer_context *ctx, char c) {
     ctx->start_col = ctx->col;
 
-    try_else(vec_push(&ctx->buffer, &c), VEC_OK, goto _error);
+    try_else(vec_push(&ctx->buffer, &c), VEC_OK, return LEX_ERR);
     pop_char(ctx);
 
     char term = 0;
-    try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
+    try_else(vec_push(&ctx->buffer, &term), VEC_OK, return LEX_ERR);
 
     enum punctuation_token p;
     hashmap_get(&ctx->punct_map, ctx->buffer.ptr, (int*)&p);
@@ -174,13 +171,12 @@ static enum lexer_result read_punctuation(struct lexer_context *ctx, char c) {
         .punct = p
     };
 
-    try_else(vec_push(&ctx->out, &t), VEC_OK, goto _error);
+    try_else(vec_push(&ctx->out, &t), VEC_OK, return LEX_ERR);
     vec_empty(&ctx->buffer);
     return LEX_OK;
 
 
-_error:
-    return LEX_ERR;
+
 }
 
 
@@ -207,6 +203,7 @@ static enum lexer_result read_directive(struct lexer_context *ctx) {
     enum directive_token d;
     if (hashmap_get(&ctx->dir_map, ctx->buffer.ptr, (int*)&d) != HMAP_OK) {
         asprintf(&ctx->error_msg, "'%s' is not a valid directive.", (char*)ctx->buffer.ptr);
+        goto _error;
     }
 
     struct token t = {
@@ -222,7 +219,7 @@ static enum lexer_result read_directive(struct lexer_context *ctx) {
     return LEX_OK;
 
 _error:
-    asprintf(&ctx->error_msg, "Memory error.");
+   
     return LEX_ERR;
 }
 
@@ -247,6 +244,7 @@ static enum lexer_result read_macro(struct lexer_context *ctx) {
     enum macro_token m;
     if (hashmap_get(&ctx->macro_map, ctx->buffer.ptr, (int*)&m) != HMAP_OK) {
         asprintf(&ctx->error_msg, "'%s' is not a valid macro.", (char*)ctx->buffer.ptr);
+        goto _error;
     }
 
     struct token t = {
@@ -262,7 +260,7 @@ static enum lexer_result read_macro(struct lexer_context *ctx) {
     return LEX_OK;
 
 _error:
-    asprintf(&ctx->error_msg, "Memory error.");
+    
     return LEX_ERR;
 }
 
@@ -333,7 +331,7 @@ static enum lexer_result read_word(struct lexer_context *ctx) {
     return LEX_OK;
 
 _error:
-    asprintf(&ctx->error_msg, "Memory error.");
+    
     return LEX_ERR;
 }
 
@@ -348,7 +346,7 @@ static enum lexer_result read_ascii(struct lexer_context *ctx) {
             asprintf(&ctx->error_msg, "'%c' is not a valid ascii character.", c);
             return LEX_ERR;
         }
-        try_else(vec_push(&ctx->buffer, &c), VEC_OK, goto _error);
+        try_else(vec_push(&ctx->buffer, &c), VEC_OK, return LEX_ERR);
         pop_char(ctx);
     }
     if (c != '"') {
@@ -358,15 +356,13 @@ static enum lexer_result read_ascii(struct lexer_context *ctx) {
     pop_char(ctx);
 
     char term = 0;
-    try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
+    try_else(vec_push(&ctx->buffer, &term), VEC_OK, return LEX_ERR);
 
-    try_else(add_lexical_token(ctx, TOKEN_ASCII), LEX_OK, goto _error);
+    try_else(add_lexical_token(ctx, TOKEN_ASCII), LEX_OK, return LEX_ERR);
 
     return LEX_OK;
 
-_error:
-    
-    return LEX_ERR;
+
 
 }
 
@@ -376,31 +372,29 @@ static enum lexer_result read_number(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
     char c;
     get_char(ctx, &c);
-    try_else(vec_push(&ctx->buffer, &c), VEC_OK, goto _error);
+    try_else(vec_push(&ctx->buffer, &c), VEC_OK, return LEX_ERR);
     pop_char(ctx);
 
     while (get_char(ctx, &c) == true && is_hex_digit_char(c)) {
-        try_else(vec_push(&ctx->buffer, &c), VEC_OK, goto _error);
+        try_else(vec_push(&ctx->buffer, &c), VEC_OK, return LEX_ERR);
         pop_char(ctx);
     }
 
     if (get_char(ctx, &c) == true && is_radix_char(c)) {
-        try_else(vec_push(&ctx->buffer, &c), VEC_OK, goto _error);
+        try_else(vec_push(&ctx->buffer, &c), VEC_OK, return LEX_ERR);
         pop_char(ctx);
     }
 
     char term = 0;
-    try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
+    try_else(vec_push(&ctx->buffer, &term), VEC_OK, return LEX_ERR;);
 
-    try_else(add_lexical_token(ctx, TOKEN_NUM), LEX_OK, goto _error);
+    try_else(add_lexical_token(ctx, TOKEN_NUM), LEX_OK, return LEX_ERR);
 
 
 
     return LEX_OK;
 
-_error:
-    
-    return LEX_ERR;
+
 }
 
 
@@ -667,7 +661,7 @@ enum lexer_result tokenise(const char *in, size_t n, struct token **out, size_t 
 
     try_else(vec_init(&ctx.buffer, 6, sizeof(char)), VEC_OK, goto _error);
     ctx._buffer = true;
-    try_else(vec_init(&ctx.out, 100, sizeof(struct token)), VEC_OK, goto _error);
+    try_else(vec_init(&ctx.out, 1000, sizeof(struct token)), VEC_OK, goto _error);
     _out = true;
 
 
