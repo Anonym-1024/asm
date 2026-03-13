@@ -1,6 +1,8 @@
 
 #include "parser_impl.h"
 
+#include "libs/error_handling.h"
+#include "libs/vector/vector.h"
 
 
 
@@ -84,7 +86,7 @@ enum parser_result parse_file(struct parser_context *ctx, struct ast_file *file)
     pop_blank_lines(ctx);
 
     if (!is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "Expected EOF");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected EOF");
         goto _error;
     }
 
@@ -93,7 +95,7 @@ enum parser_result parse_file(struct parser_context *ctx, struct ast_file *file)
 _error:
 
     if (_sections) {
-        for (size_t i = 0; i < file->sec_n; i++) {
+        for (uint32_t i = 0; i < file->sec_n; i++) {
             ast_section_deinit(&file->sections[i]);
         }
         free(file->sections);
@@ -109,7 +111,7 @@ static bool follows_section(struct parser_context *ctx) {
             || is_matching_directive(ctx, 0, DIR_EXEC);
 }
 
-enum parser_result parse_sections(struct parser_context *ctx, struct ast_section **sections, size_t *sec_c) {
+enum parser_result parse_sections(struct parser_context *ctx, struct ast_section **sections, uint32_t *sec_c) {
     
     struct vector sections_v;
 
@@ -164,7 +166,7 @@ enum parser_result parse_section(struct parser_context *ctx, struct ast_section 
         try_else(parse_exec_section(ctx, &section->exec_section), PARSER_OK, goto _error);
         _exec_section = true;
     } else {
-        asprintf(&ctx->error_msg, "Expected a section header '.DATA' or '.EXEC'");
+        snprintf(ctx->error_msg,  ERR_MSG_LEN, "Expected a section header '.DATA' or '.EXEC'");
         goto _error;
     }
 
@@ -197,7 +199,7 @@ enum parser_result parse_data_section(struct parser_context *ctx, struct ast_dat
 _error:
 
     if (_stmts) {
-        for (size_t i = 0; i < section->stmts_c; i++) {
+        for (uint32_t i = 0; i < section->stmts_c; i++) {
             ast_data_stmt_deinit(&section->data_stmts[i]);
         }
         free(section->data_stmts);
@@ -209,19 +211,19 @@ _error:
 enum parser_result parse_data_dir(struct parser_context *ctx) {
 
     if (!is_matching_directive(ctx, 0, DIR_DATA)) {
-        asprintf(&ctx->error_msg, "Expected '.DATA'");
+        snprintf(ctx->error_msg,  ERR_MSG_LEN, "Expected '.DATA'");
         goto _error;
     }
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_SEMICOLON)) {
-        asprintf(&ctx->error_msg, "Expected ':'");
+        snprintf(ctx->error_msg,  ERR_MSG_LEN, "Expected ':'");
         goto _error;
     }
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "expected 'end of statement'");
+        snprintf(ctx->error_msg,  ERR_MSG_LEN, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -248,7 +250,7 @@ static bool follows_exec_stmt(struct parser_context *ctx) {
             || is_matching_directive(ctx, 0, DIR_START);
 }
 
-enum parser_result parse_data_stmts(struct parser_context *ctx, struct ast_data_stmt **stmts, size_t *stmt_c) {
+enum parser_result parse_data_stmts(struct parser_context *ctx, struct ast_data_stmt **stmts, uint32_t *stmt_c) {
 
     bool _stmts = false;
     bool _stmt = false;
@@ -268,7 +270,7 @@ enum parser_result parse_data_stmts(struct parser_context *ctx, struct ast_data_
     }
     // Special case error
     if (follows_exec_stmt(ctx)) {
-        asprintf(&ctx->error_msg, "Executable statement cannot occur in '.DATA' section.");
+        snprintf(ctx->error_msg,  ERR_MSG_LEN, "Executable statement cannot occur in '.DATA' section.");
         goto _error;
     }
 
@@ -309,7 +311,7 @@ enum parser_result parse_data_stmt(struct parser_context *ctx, struct ast_data_s
         try_else(parse_label_stmt(ctx, &stmt->label_stmt), PARSER_OK, goto _error);
         //_label_stmt = true;
     } else {
-        asprintf(&ctx->error_msg, "Expected statement 'byte', 'bytes', or a label");
+        snprintf(ctx->error_msg,  ERR_MSG_LEN, "Expected statement 'byte', 'bytes', or a label");
         goto _error;
     }
 
@@ -338,7 +340,7 @@ enum parser_result parse_byte_stmt(struct parser_context *ctx, struct ast_byte_s
     bool _init = false;
 
     if (!is_matching_data_unit(ctx, 0, DATA_BYTE)) {
-        asprintf(&ctx->error_msg, "Expected 'byte'");
+        snprintf(ctx->error_msg,  ERR_MSG_LEN, "Expected 'byte'");
         goto _error;
     }
     next(ctx);
@@ -352,7 +354,7 @@ enum parser_result parse_byte_stmt(struct parser_context *ctx, struct ast_byte_s
     }
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "expected 'end of statement'");
+        snprintf(ctx->error_msg,  ERR_MSG_LEN, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -371,21 +373,21 @@ enum parser_result parse_bytes_stmt(struct parser_context *ctx, struct ast_bytes
     
 
     if (!is_matching_data_unit(ctx, 0, DATA_BYTES)) {
-        asprintf(&ctx->error_msg, "Expected 'bytes'");
+        snprintf(ctx->error_msg,  ERR_MSG_LEN, "Expected 'bytes'");
         goto _error;
     }
     next(ctx);
 
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_LPAR)) {
-        asprintf(&ctx->error_msg, "Expected '('");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected '('");
         goto _error;
     }
     next(ctx);
 
 
     if (!is_matching_kind(ctx, 0, TOKEN_NUM)) {
-        asprintf(&ctx->error_msg, "Expected a number");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a number");
         goto _error;
     }
     try_else(copy_terminal(ctx, &stmt->len), PARSER_OK, goto _error);
@@ -394,7 +396,7 @@ enum parser_result parse_bytes_stmt(struct parser_context *ctx, struct ast_bytes
 
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_RPAR)) {
-        asprintf(&ctx->error_msg, "Expected ')'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected ')'");
         goto _error;
     }
     next(ctx);
@@ -409,7 +411,7 @@ enum parser_result parse_bytes_stmt(struct parser_context *ctx, struct ast_bytes
     }
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "expected 'end of statement'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -430,7 +432,7 @@ enum parser_result parse_label_stmt(struct parser_context *ctx, struct ast_label
     
 
     if (!is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        asprintf(&ctx->error_msg, "Expected label identifier");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected label identifier");
         goto _error;
     }
     try_else(copy_terminal(ctx, &stmt->ident), PARSER_OK, goto _error);
@@ -438,13 +440,13 @@ enum parser_result parse_label_stmt(struct parser_context *ctx, struct ast_label
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_SEMICOLON)) {
-        asprintf(&ctx->error_msg, "Expected ':'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected ':'");
         goto _error;
     }
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "expected 'end of statement'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -478,7 +480,7 @@ enum parser_result parse_initializer(struct parser_context *ctx, struct ast_init
         _byte = true;
         
     } else {
-        asprintf(&ctx->error_msg, "Expected a number, ascii literal or a byte initializer");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a number, ascii literal or a byte initializer");
         goto _error;
     }
 
@@ -497,7 +499,7 @@ enum parser_result parse_byte_initializer(struct parser_context *ctx, struct ast
     bool _init = false;
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_LBRACE)) {
-        asprintf(&ctx->error_msg, "Expected '{'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected '{'");
         goto _error;
     }
     next(ctx);
@@ -508,7 +510,7 @@ enum parser_result parse_byte_initializer(struct parser_context *ctx, struct ast
 
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_RBRACE)) {
-        asprintf(&ctx->error_msg, "Expected '}'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected '}'");
         goto _error;
     }
     next(ctx);
@@ -523,7 +525,7 @@ _error:
 }
 
 
-enum parser_result parse_numbers(struct parser_context *ctx, struct ast_terminal **numbers, size_t *byte_c) {
+enum parser_result parse_numbers(struct parser_context *ctx, struct ast_terminal **numbers, uint32_t *byte_c) {
 
     bool _numbers = false;
     
@@ -549,7 +551,7 @@ enum parser_result parse_numbers(struct parser_context *ctx, struct ast_terminal
         next(ctx);
 
         if (!is_matching_kind(ctx, 0, TOKEN_NUM)) {
-            asprintf(&ctx->error_msg, "Expected a number after comma");
+            snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a number after comma");
             goto _error;
         }
         try_else(copy_terminal(ctx, &number), PARSER_OK, goto _error);
@@ -586,7 +588,7 @@ enum parser_result parse_exec_section(struct parser_context *ctx, struct ast_exe
 _error:
 
     if (_stmts) {
-        for (size_t i = 0; i < section->stmts_c; i++) {
+        for (uint32_t i = 0; i < section->stmts_c; i++) {
             ast_exec_stmt_deinit(&section->exec_stmts[i]);
         }
         free(section->exec_stmts);
@@ -597,19 +599,19 @@ _error:
 
 enum parser_result parse_exec_dir(struct parser_context *ctx) {
     if (!is_matching_directive(ctx, 0, DIR_EXEC)) {
-        asprintf(&ctx->error_msg, "Expected '.EXEC'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected '.EXEC'");
         goto _error;
     }
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_SEMICOLON)) {
-        asprintf(&ctx->error_msg, "Expected ':'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected ':'");
         goto _error;
     }
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "expected 'end of statement'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -623,7 +625,7 @@ _error:
 
 
 
-enum parser_result parse_exec_stmts(struct parser_context *ctx, struct ast_exec_stmt **stmts, size_t *stmt_c) {
+enum parser_result parse_exec_stmts(struct parser_context *ctx, struct ast_exec_stmt **stmts, uint32_t *stmt_c) {
     bool _stmts = false;
     bool _stmt = false;
 
@@ -641,7 +643,7 @@ enum parser_result parse_exec_stmts(struct parser_context *ctx, struct ast_exec_
     }
 
     if (follows_data_stmt(ctx)) {
-        asprintf(&ctx->error_msg, "Data statement cannot occur in '.EXEC' section.");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Data statement cannot occur in '.EXEC' section.");
         goto _error;
     }
 
@@ -687,7 +689,7 @@ enum parser_result parse_exec_stmt(struct parser_context *ctx, struct ast_exec_s
         stmt->kind = AST_EXEC_STMT_START_STMT;
         try_else(parse_start_stmt(ctx), PARSER_OK, goto _error);
     } else {
-        asprintf(&ctx->error_msg, "Expected an instruction, macro, label or a local label statement");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected an instruction, macro, label or a local label statement");
         goto _error;
     }
 
@@ -713,19 +715,19 @@ _error:
 
 enum parser_result parse_start_stmt(struct parser_context *ctx) {
     if (!is_matching_directive(ctx, 0, DIR_START)) {
-        asprintf(&ctx->error_msg, "Expected '.start'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected '.start'");
         goto _error;
     }
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_SEMICOLON)) {
-        asprintf(&ctx->error_msg, "Expected ':'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected ':'");
         goto _error;
     }
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "expected 'end of statement'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -743,7 +745,7 @@ enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct ast
     bool _args = false;
 
     if (!is_matching_kind(ctx, 0, TOKEN_INSTR)) {
-        asprintf(&ctx->error_msg, "Expected instruction");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected instruction");
         goto _error;
     }
     try_else(copy_terminal(ctx, &stmt->instr), PARSER_OK, goto _error);
@@ -762,7 +764,7 @@ enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct ast
     _args = true;
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "expected 'end of statement'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -785,14 +787,14 @@ enum parser_result parse_condition_code(struct parser_context *ctx, struct ast_t
     
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_LPAR)) {
-        asprintf(&ctx->error_msg, "Expected '('");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected '('");
         goto _error;
     }
     next(ctx);
 
 
     if (!is_matching_kind(ctx, 0, TOKEN_COND_CODE)) {
-        asprintf(&ctx->error_msg, "Expected a condition code");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a condition code");
         goto _error;
     }
     try_else(copy_terminal(ctx, cond), PARSER_OK, goto _error);
@@ -801,7 +803,7 @@ enum parser_result parse_condition_code(struct parser_context *ctx, struct ast_t
 
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_RPAR)) {
-        asprintf(&ctx->error_msg, "Expected ')'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected ')'");
         goto _error;
     }
     next(ctx);
@@ -825,7 +827,7 @@ static bool follows_arg(struct parser_context *ctx) {
         is_matching_directive(ctx, 0, DIR_B);
 }
 
-enum parser_result parse_args(struct parser_context *ctx, struct ast_arg **args, size_t *arg_c) {
+enum parser_result parse_args(struct parser_context *ctx, struct ast_arg **args, uint32_t *arg_c) {
 
     bool _args = false;
     
@@ -851,7 +853,7 @@ enum parser_result parse_args(struct parser_context *ctx, struct ast_arg **args,
         next(ctx);
 
         if (!follows_arg(ctx)) {
-            asprintf(&ctx->error_msg, "Expected an argument after a comma");
+            snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected an argument after a comma");
             goto _error;
         }
         try_else(parse_arg(ctx, &arg), PARSER_OK, goto _error);
@@ -913,7 +915,7 @@ enum parser_result parse_arg(struct parser_context *ctx, struct ast_arg *arg) {
        next(ctx);
        
     } else {
-        asprintf(&ctx->error_msg, "Expected argument, found instead.");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected argument, found instead.");
         goto _error;
     }
 
@@ -929,13 +931,13 @@ enum parser_result parse_immediate(struct parser_context *ctx, struct ast_termin
     
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_HASH)) {
-        asprintf(&ctx->error_msg, "Expected '#'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected '#'");
         goto _error;
     }
     next(ctx);
 
     if (!is_matching_kind(ctx, 0, TOKEN_NUM)) {
-        asprintf(&ctx->error_msg, "Expected a number");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a number");
         goto _error;
     }
     try_else(copy_terminal(ctx, immediate), PARSER_OK, goto _error);
@@ -955,7 +957,7 @@ enum parser_result parse_label(struct parser_context *ctx, struct ast_terminal *
 
 
     if (!is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        asprintf(&ctx->error_msg, "Expected a label");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a label");
         goto _error;
     }
     try_else(copy_terminal(ctx, label), PARSER_OK, goto _error);
@@ -988,7 +990,7 @@ enum parser_result parse_loc_label(struct parser_context *ctx, struct ast_loc_la
     
 
     if (!is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        asprintf(&ctx->error_msg, "Expected a label");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a label");
         goto _error;
     }
     try_else(copy_terminal(ctx, &label->ident), PARSER_OK, goto _error);
@@ -1006,7 +1008,7 @@ enum parser_result parse_direction_dir(struct parser_context *ctx, struct ast_te
     
 
     if (!is_matching_directive(ctx, 0, DIR_F) && !is_matching_directive(ctx, 0, DIR_B)) {
-        asprintf(&ctx->error_msg, "Expected a direction directive ('.f' or '.b')");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a direction directive ('.f' or '.b')");
         goto _error;
     }
     try_else(copy_terminal(ctx, dir), PARSER_OK, goto _error);
@@ -1025,14 +1027,14 @@ enum parser_result parse_loc_label_dist(struct parser_context *ctx, struct ast_t
     
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_LPAR)) {
-        asprintf(&ctx->error_msg, "Expected '('");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected '('");
         goto _error;
     }
     next(ctx);
 
 
     if (!is_matching_kind(ctx, 0, TOKEN_NUM)) {
-        asprintf(&ctx->error_msg, "Expected a number code");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a number code");
         goto _error;
     }
     try_else(copy_terminal(ctx, dist), PARSER_OK, goto _error);
@@ -1041,7 +1043,7 @@ enum parser_result parse_loc_label_dist(struct parser_context *ctx, struct ast_t
 
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_RPAR)) {
-        asprintf(&ctx->error_msg, "Expected ')'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected ')'");
         goto _error;
     }
     next(ctx);
@@ -1060,7 +1062,7 @@ enum parser_result parse_macro_stmt(struct parser_context *ctx, struct ast_macro
     
 
     if (!is_matching_kind(ctx, 0, TOKEN_MACRO)) {
-        asprintf(&ctx->error_msg, "Expected instruction");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected instruction");
         goto _error;
     }
     try_else(copy_terminal(ctx, &stmt->instr), PARSER_OK, goto _error);
@@ -1079,7 +1081,7 @@ enum parser_result parse_macro_stmt(struct parser_context *ctx, struct ast_macro
     
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "expected 'end of statement'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);
@@ -1096,13 +1098,13 @@ enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct ast_l
 
 
     if (!is_matching_directive(ctx, 0, DIR_L)) {
-        asprintf(&ctx->error_msg, "Expected label identifier");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected label identifier");
         goto _error;
     }
     next(ctx);
 
     if (!is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        asprintf(&ctx->error_msg, "Expected label identifier");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected label identifier");
         goto _error;
     }
     try_else(copy_terminal(ctx, &stmt->ident), PARSER_OK, goto _error);
@@ -1110,13 +1112,13 @@ enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct ast_l
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_SEMICOLON)) {
-        asprintf(&ctx->error_msg, "Expected ':'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected ':'");
         goto _error;
     }
     next(ctx);
 
     if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        asprintf(&ctx->error_msg, "expected 'end of statement'");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "expected 'end of statement'");
         goto _error;
     }
     pop_blank_lines(ctx);

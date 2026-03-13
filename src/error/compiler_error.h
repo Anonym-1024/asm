@@ -8,15 +8,18 @@
 
 
 enum compiler_error_kind {
-    LEXER_ERROR,
-    PARSER_ERROR,
+    CERROR_LEXER,
+    CERROR_PARSER,
+    CERROR_SEMANTIC
 };
+
+#define ERR_MSG_LEN 100
 
 struct compiler_error {
     enum compiler_error_kind kind;
-    size_t line;
-    size_t col;
-    char *msg;
+    uint32_t line;
+    uint32_t col;
+    char msg[ERR_MSG_LEN];
 };
 
 void compiler_error_deinit(struct compiler_error *err);

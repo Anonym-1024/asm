@@ -3,18 +3,18 @@
 #define __PARSER_IMPL_HEADER__
 
 
-
-#include "lexer/lexer.h"
+#include "error/compiler_error.h"
+#include "lexer/token.h"
 #include "ast.h"
 
 struct parser_context {
     struct token *in;
-    size_t n;
-    size_t index;
+    uint32_t n;
+    uint32_t index;
 
-    size_t line;
-    size_t col;
-    char *error_msg;
+    uint32_t line;
+    uint32_t col;
+    char error_msg[ERR_MSG_LEN];
 };
 
 
@@ -26,7 +26,7 @@ enum parser_result {
 
 enum parser_result parse_file(struct parser_context *ctx, struct ast_file *file);
 
-enum parser_result parse_sections(struct parser_context *ctx, struct ast_section **sections, size_t *sec_c);
+enum parser_result parse_sections(struct parser_context *ctx, struct ast_section **sections, uint32_t *sec_c);
 
 enum parser_result parse_section(struct parser_context *ctx, struct ast_section *section);
 
@@ -34,7 +34,7 @@ enum parser_result parse_data_section(struct parser_context *ctx, struct ast_dat
 
 enum parser_result parse_data_dir(struct parser_context *ctx);
 
-enum parser_result parse_data_stmts(struct parser_context *ctx, struct ast_data_stmt **stmts, size_t *stmt_c);
+enum parser_result parse_data_stmts(struct parser_context *ctx, struct ast_data_stmt **stmts, uint32_t *stmt_c);
 
 enum parser_result parse_data_stmt(struct parser_context *ctx, struct ast_data_stmt *stmt);
 
@@ -48,13 +48,13 @@ enum parser_result parse_initializer(struct parser_context *ctx, struct ast_init
 
 enum parser_result parse_byte_initializer(struct parser_context *ctx, struct ast_byte_init *byte_init);
 
-enum parser_result parse_numbers(struct parser_context *ctx, struct ast_terminal **numbers, size_t *byte_c);
+enum parser_result parse_numbers(struct parser_context *ctx, struct ast_terminal **numbers, uint32_t *byte_c);
 
 enum parser_result parse_exec_section(struct parser_context *ctx, struct ast_exec_section *section);
 
 enum parser_result parse_exec_dir(struct parser_context *ctx);
 
-enum parser_result parse_exec_stmts(struct parser_context *ctx, struct ast_exec_stmt **stmts, size_t *stmt_c);
+enum parser_result parse_exec_stmts(struct parser_context *ctx, struct ast_exec_stmt **stmts, uint32_t *stmt_c);
 
 enum parser_result parse_exec_stmt(struct parser_context *ctx, struct ast_exec_stmt *stmt);
 
@@ -64,7 +64,7 @@ enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct ast
 
 enum parser_result parse_condition_code(struct parser_context *ctx, struct ast_terminal *cond);
 
-enum parser_result parse_args(struct parser_context *ctx, struct ast_arg **args, size_t *arg_c);
+enum parser_result parse_args(struct parser_context *ctx, struct ast_arg **args, uint32_t *arg_c);
 
 enum parser_result parse_arg(struct parser_context *ctx, struct ast_arg *arg);
 

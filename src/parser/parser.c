@@ -2,7 +2,7 @@
 #include "parser.h"
 
 
-enum parser_result parse(struct token *in, size_t n, struct ast_file *out, struct compiler_error *err) {
+enum parser_result parse(struct token *in, uint32_t n, struct ast_file *out, struct compiler_error *err) {
 
     struct parser_context ctx = {
         .in = in,
@@ -11,8 +11,9 @@ enum parser_result parse(struct token *in, size_t n, struct ast_file *out, struc
         
         .line = 1,
         .col = 1,
-        .error_msg = NULL
+       
     };
+    strcpy(ctx.error_msg, "Unknown error");
 
     enum parser_result res = parse_file(&ctx, out);
 
@@ -20,14 +21,12 @@ enum parser_result parse(struct token *in, size_t n, struct ast_file *out, struc
         return PARSER_OK;
     }
 
-    if (ctx.error_msg == NULL) {
-        ctx.error_msg = "Unknown error.";
-    }
+    
 
     err->col = ctx.col;
     err->line = ctx.line;
-    err->kind = PARSER_ERROR;
-    err->msg = ctx.error_msg;
+    err->kind = CERROR_PARSER;
+    strcpy(err->msg, ctx.error_msg);
 
     return PARSER_ERR;
 }

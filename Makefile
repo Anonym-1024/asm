@@ -1,7 +1,7 @@
 NAME=a.out
 
 CC      := clang
-CFLAGS  := -O3 -MMD -MP -Isrc -std=c11
+CFLAGS  := -O0 -MMD -MP -Isrc -std=c11 -pedantic -Wall -Wextra -g
 
 SRC_DIR := src
 OBJ_DIR := build
@@ -17,7 +17,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
--include $(DEPS)
+-include $()
 
 clean:
 	rm -rf $(OBJ_DIR) $(NAME)

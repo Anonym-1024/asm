@@ -24,7 +24,7 @@ enum hashmap_result {
 struct hashmap_item {
     struct hashmap_item *next;
     char *key;
-    int value;
+    uint32_t value;
 };
 
 struct hashmap {
@@ -35,9 +35,9 @@ struct hashmap {
 
 enum hashmap_result hashmap_init(struct hashmap *hm, size_t size);
 
-enum hashmap_result hashmap_add( struct hashmap *hm, const char *key, int value);
+enum hashmap_result hashmap_add( struct hashmap *hm, const char *key, uint32_t value);
 
-enum hashmap_result hashmap_get(const struct hashmap *hm, const char *key, int *value);
+enum hashmap_result hashmap_get(const struct hashmap *hm, const char *key, uint32_t *value);
 
 enum hashmap_result hashmap_find(const struct hashmap *hm, const char *key);
 

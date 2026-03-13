@@ -42,7 +42,7 @@ static size_t get_index(const struct hashmap *hm, const char *key) {
     return hash % hm->size;
 }
 
-enum hashmap_result hashmap_add(struct hashmap *hm, const char *key, int value) {
+enum hashmap_result hashmap_add(struct hashmap *hm, const char *key, uint32_t value) {
     size_t index = get_index(hm, key);
     struct hashmap_item *item = hm->table[index];
 
@@ -78,7 +78,7 @@ enum hashmap_result hashmap_add(struct hashmap *hm, const char *key, int value) 
 
 }
 
-enum hashmap_result hashmap_get(const struct hashmap *hm, const char *key, int *value) {
+enum hashmap_result hashmap_get(const struct hashmap *hm, const char *key, uint32_t *value) {
     struct hashmap_item *item = hm->table[get_index(hm, key)];
 
     

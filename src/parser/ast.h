@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-
+#include "lexer/token.h"
 
 
 struct ast_terminal {
@@ -16,7 +16,7 @@ struct ast_terminal {
 
 struct ast_file {
     struct ast_section *sections;
-    size_t sec_n;
+    uint32_t sec_n;
 };
 
 
@@ -27,12 +27,12 @@ enum ast_section_kind {
 
 struct ast_data_section {
     struct ast_data_stmt *data_stmts;
-    size_t stmts_c;
+    uint32_t stmts_c;
 };
 
 struct ast_exec_section {
     struct ast_exec_stmt *exec_stmts;
-    size_t stmts_c;
+    uint32_t stmts_c;
 };
 
 struct ast_section {
@@ -53,7 +53,7 @@ enum ast_initializer_kind {
 
 struct ast_byte_init {
     struct ast_terminal *numbers;
-    size_t num_c;
+    uint32_t num_c;
 };
 
 struct ast_initializer {
@@ -72,9 +72,9 @@ struct ast_byte_stmt {
 };
 
 struct ast_bytes_stmt {
+    bool is_initialized;
     struct ast_initializer init;
     struct ast_terminal len;
-    bool is_initialized;
 };
 
 struct ast_label_stmt {
@@ -103,14 +103,14 @@ struct ast_instruction_stmt {
     struct ast_terminal instr;
     struct ast_terminal condition_code;
     struct ast_arg *args;
-    size_t args_c;
+    uint32_t args_c;
 };
 
 struct ast_macro_stmt {
     struct ast_terminal instr;
     struct ast_terminal condition_code;
     struct ast_arg *args;
-    size_t args_c;
+    uint32_t args_c;
 };
 
 struct ast_loc_label_stmt {
@@ -134,9 +134,6 @@ struct ast_exec_stmt {
         struct ast_loc_label_stmt loc_label_stmt;
     };
 };
-
-
-
 
 
 

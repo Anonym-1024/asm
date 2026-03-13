@@ -73,7 +73,7 @@ void ast_data_stmt_deinit(struct ast_data_stmt *node) {
 
 
 void ast_data_section_deinit(struct ast_data_section *node) {
-    for (size_t i = 0; i < node->stmts_c; i++) {
+    for (uint32_t i = 0; i < node->stmts_c; i++) {
         ast_data_stmt_deinit(&node->data_stmts[i]);
     }
     free(node->data_stmts);
@@ -106,7 +106,7 @@ void ast_exec_stmt_deinit(struct ast_exec_stmt *node) {
 
 
 void ast_exec_section_deinit(struct ast_exec_section *node) {
-    for (size_t i = 0; i < node->stmts_c; i++) {
+    for (uint32_t i = 0; i < node->stmts_c; i++) {
         ast_exec_stmt_deinit(&node->exec_stmts[i]);
     }
     free(node->exec_stmts);
@@ -123,7 +123,7 @@ void ast_section_deinit(struct ast_section *node) {
 
 
 void ast_file_deinit(struct ast_file *node) {
-    for (size_t i = 0; i < node->sec_n; i++) {
+    for (uint32_t i = 0; i < node->sec_n; i++) {
         ast_section_deinit(&node->sections[i]);
     }
     free(node->sections);

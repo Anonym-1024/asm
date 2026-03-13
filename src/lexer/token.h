@@ -192,10 +192,11 @@ enum punctuation_token {
 
 struct token {
     enum token_kind kind;
-    size_t line; 
-    size_t col;
+    uint32_t line; 
+    uint32_t col;
     union {
         char *lexeme;
+        int32_t number;
         enum instruction_token instr;
         enum macro_token macro;
         enum directive_token dir;

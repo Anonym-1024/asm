@@ -10,27 +10,27 @@
 #include <unistd.h>
 #include "libs/hashmap/hashmap.h"
 #include "libs/arena/arena.h"
-
+#include "sema/sema.h"
 #include <time.h>
 
 int main(void) {
 
 
 
+    char *dd = "resources/example.asm";
     
-    
-    FILE *f = fopen("resources/b.txt", "r");
+    FILE *f = fopen(dd, "r");
 
     
 
-    off_t s = get_file_size("resources/b.txt");
+    uint32_t s = get_file_size(dd);
 
     char *in = malloc(sizeof(char) * s);
     fread(in, sizeof(char), s, f);
 
     
     struct token *out;
-    size_t cc;
+    uint32_t cc;
     
     struct compiler_error err;
 
@@ -39,11 +39,11 @@ int main(void) {
     free(in);
     printf("Lexer done");
     fflush(stdout);
-    sleep(10);
+
     if (c == LEX_ERR) {
         
         print_compiler_error(stdout, &err);
-        compiler_error_deinit(&err);
+        
    
         fclose(f);
         
@@ -63,13 +63,21 @@ int main(void) {
         
         printf("Hura");
         
-        ast_file_deinit(&file);
+        
     } else {
         print_compiler_error(stdout, &err);
-        compiler_error_deinit(&err);
+        
     }
 
-    for (size_t i = 0; i < cc; i++) {
+    /*
+    struct sema_context ff;
+    if (build_symbol_tables(&file, &ff) == SEMA_ERR) {
+        print_compiler_error(stdout, &ff.err);
+    }
+
+    */
+
+    for (uint32_t i = 0; i < cc; i++) {
         token_deinit(&out[i]);
 
     }

@@ -2,25 +2,25 @@
 #include "lexer.h"
 
 #include <ctype.h>
-#include "lexer_resources.h"
+#include "libs/vector/vector.h"
 #include "libs/hashmap/hashmap.h"
 #include "libs/error_handling.h"
 
 
 struct lexer_context {
     const char *in; //! Reference
-    size_t n;
-    size_t index;
+    uint32_t n;
+    uint32_t index;
     struct vector out; //! Owned
     
-    size_t line;
-    size_t col;
-    size_t start_col;
+    uint32_t line;
+    uint32_t col;
+    uint32_t start_col;
 
     struct vector buffer; //! Owned
     bool _buffer;
 
-    char *error_msg;
+    char error_msg[ERR_MSG_LEN];
 
     struct hashmap dir_map;
     struct hashmap instr_map;
@@ -161,8 +161,9 @@ static enum lexer_result read_punctuation(struct lexer_context *ctx, char c) {
     char term = 0;
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, return LEX_ERR);
 
+    
     enum punctuation_token p;
-    hashmap_get(&ctx->punct_map, ctx->buffer.ptr, (int*)&p);
+    hashmap_get(&ctx->punct_map, ctx->buffer.ptr, &p);
 
     struct token t = {
         .kind = TOKEN_PUNCT,
@@ -199,12 +200,13 @@ static enum lexer_result read_directive(struct lexer_context *ctx) {
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
 
 
-
+    uint64_t _t;
     enum directive_token d;
-    if (hashmap_get(&ctx->dir_map, ctx->buffer.ptr, (int*)&d) != HMAP_OK) {
-        asprintf(&ctx->error_msg, "'%s' is not a valid directive.", (char*)ctx->buffer.ptr);
+    if (hashmap_get(&ctx->dir_map, ctx->buffer.ptr, &d) != HMAP_OK) {
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "'%s' is not a valid directive.", (char*)ctx->buffer.ptr);
         goto _error;
     }
+     
 
     struct token t = {
         .kind = TOKEN_DIR,
@@ -240,13 +242,14 @@ static enum lexer_result read_macro(struct lexer_context *ctx) {
     char term = 0;
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
 
-
+    
     enum macro_token m;
-    if (hashmap_get(&ctx->macro_map, ctx->buffer.ptr, (int*)&m) != HMAP_OK) {
-        asprintf(&ctx->error_msg, "'%s' is not a valid macro.", (char*)ctx->buffer.ptr);
+    if (hashmap_get(&ctx->macro_map, ctx->buffer.ptr, &m) != HMAP_OK) {
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "'%s' is not a valid macro.", (char*)ctx->buffer.ptr);
         goto _error;
     }
-
+    
+    
     struct token t = {
         .kind = TOKEN_MACRO,
         .line = ctx->line,
@@ -294,34 +297,43 @@ static enum lexer_result read_word(struct lexer_context *ctx) {
         .line = ctx->line,
         .col = ctx->start_col
     };
+    
     unsigned int x;
     
-    if (hashmap_get(&ctx->instr_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+    if (hashmap_get(&ctx->instr_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_INSTR;
+        
         t.instr = x;
-    } else if (hashmap_get(&ctx->reg_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+    } else if (hashmap_get(&ctx->reg_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_REG;
+        
         t.reg = x;
-    } else if (hashmap_get(&ctx->sys_reg_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+    } else if (hashmap_get(&ctx->sys_reg_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_SYS_REG;
+        
         t.sys_reg = x;
-    } else if (hashmap_get(&ctx->addr_reg_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+    } else if (hashmap_get(&ctx->addr_reg_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_ADDR_REG;
+        
         t.addr_reg = x;
-    } else if (hashmap_get(&ctx->port_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+    } else if (hashmap_get(&ctx->port_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_PORT;
+        
         t.port = x;
-    } else if (hashmap_get(&ctx->data_unit_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+    } else if (hashmap_get(&ctx->data_unit_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_DATA_UNIT;
+        
         t.data_unit = x;
-    } else if (hashmap_get(&ctx->cond_code_map, ctx->buffer.ptr, (int*)&x) == HMAP_OK) {
+    } else if (hashmap_get(&ctx->cond_code_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_COND_CODE;
+        
         t.cond_code = x;
     } else {
         t.kind = TOKEN_IDENT;
         try_else(add_lexical_token(ctx, TOKEN_IDENT), LEX_OK, goto _error);
         return LEX_OK;
     }
+    
 
    
 
@@ -343,14 +355,14 @@ static enum lexer_result read_ascii(struct lexer_context *ctx) {
     char c;
     while(get_char(ctx, &c) == true && c != '"') {
         if (!is_printable_char(c)) {
-            asprintf(&ctx->error_msg, "'%c' is not a valid ascii character.", c);
+            snprintf(ctx->error_msg, ERR_MSG_LEN, "'%c' is not a valid ascii character.", c);
             return LEX_ERR;
         }
         try_else(vec_push(&ctx->buffer, &c), VEC_OK, return LEX_ERR);
         pop_char(ctx);
     }
     if (c != '"') {
-        asprintf(&ctx->error_msg, "Unterminated ascii literal.");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Unterminated ascii literal.");
         return LEX_ERR;
     }
     pop_char(ctx);
@@ -366,6 +378,38 @@ static enum lexer_result read_ascii(struct lexer_context *ctx) {
 
 }
 
+
+
+static enum lexer_result validate_number(struct lexer_context *ctx, const char *str, int32_t *n) {
+    int base = 10;
+    size_t len = strlen(str);
+
+    const char *end = &str[len-1];
+    if (*end == 'd') {
+    } else if (*end == 'x') {
+        base = 16;
+    } else if (*end == 'b') {
+        base = 2;
+    } else {
+        end++;
+    }
+    char *endptr;
+    errno = 0;
+    long res = strtol(str, &endptr, base);
+
+    if (endptr != end) {
+        strcpy(ctx->error_msg, "Invalid number litaral");
+        return LEX_ERR;
+    }
+    if (errno == ERANGE || res < INT32_MIN || res > INT32_MAX) {
+        strcpy(ctx->error_msg, "Number literal overflow");
+        return LEX_ERR;
+    }
+
+    
+    *n = res;
+    return LEX_OK;
+}
 
 
 static enum lexer_result read_number(struct lexer_context *ctx) {
@@ -388,7 +432,16 @@ static enum lexer_result read_number(struct lexer_context *ctx) {
     char term = 0;
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, return LEX_ERR;);
 
-    try_else(add_lexical_token(ctx, TOKEN_NUM), LEX_OK, return LEX_ERR);
+    int32_t n;
+    try_else(validate_number(ctx, ctx->buffer.ptr, &n), LEX_OK, return LEX_ERR);
+
+    struct token t = {
+        .line = ctx->line,
+        .col = ctx->start_col,
+        .kind = TOKEN_NUM,
+        .number = n
+    };
+    try_else(vec_push(&ctx->out, &t), VEC_OK, return LEX_ERR;);
 
 
 
@@ -638,7 +691,7 @@ _error:
     return LEX_ERR;
 }
 
-enum lexer_result tokenise(const char *in, size_t n, struct token **out, size_t *out_n, struct compiler_error *error) {
+enum lexer_result tokenise(const char *in, uint32_t n, struct token **out, uint32_t *out_n, struct compiler_error *error) {
 
     
     struct lexer_context ctx = {
@@ -650,9 +703,10 @@ enum lexer_result tokenise(const char *in, size_t n, struct token **out, size_t 
         .col = 1,
         .start_col = 1,
 
-        .error_msg = NULL,
+        
         ._buffer = false
     }; 
+    strcpy(ctx.error_msg, "Unknown error.");
 
     bool _out = false;
     
@@ -696,7 +750,7 @@ enum lexer_result tokenise(const char *in, size_t n, struct token **out, size_t 
             try_else(read_word(&ctx), LEX_OK, goto _error);
             
         } else {
-            asprintf(&ctx.error_msg, "'%c' is not a valid character", c);
+            snprintf(ctx.error_msg, ERR_MSG_LEN, "'%c' is not a valid character", c);
             goto _error;
         }
     }
@@ -739,13 +793,11 @@ _error:
     if (_out) vec_deinit(&ctx.out, &_token_deinit);
 
 
-    if (ctx.error_msg == NULL) {
-        asprintf(&ctx.error_msg, "Memory error.");
-    }
+    
     error->line = ctx.line;
     error->col = ctx.start_col;
-    error->kind = LEXER_ERROR;
-    error->msg = ctx.error_msg;
+    error->kind = CERROR_LEXER;
+    strcpy(error->msg, ctx.error_msg);
 
     hashmap_deinit(&ctx.punct_map);
     hashmap_deinit(&ctx.cond_code_map);
@@ -827,7 +879,7 @@ int get_token_desc(struct token *t, char **out) {
 
 
     *out = NULL;
-    if (asprintf(out, "TOKEN [%ld:%ld]: { Kind: %s; Lexeme: %s }", t->line, t->col, kind, t->lexeme) == -1) {
+    if (asprintf(out, "TOKEN [%d:%d]: { Kind: %s; Lexeme: %s }", t->line, t->col, kind, t->lexeme) == -1) {
         goto _error;
     }
     return 0;
