@@ -9,8 +9,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "libs/arena/arena.h"
-
 enum hashmap_result {
     HMAP_OK,
     HMAP_MEM_ERR,

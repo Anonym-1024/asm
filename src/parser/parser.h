@@ -4,7 +4,7 @@
 
 
 
-#include "ast.h"
+#include "shared/ast.h"
 #include "parser_impl.h"
 #include "error/compiler_error.h"
 

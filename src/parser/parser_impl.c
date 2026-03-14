@@ -46,8 +46,8 @@ static void next(struct parser_context *ctx) {
     }
 
     ctx->index++;
-    ctx->line = ctx->in[ctx->index].line;
     ctx->col = ctx->in[ctx->index].col;
+    
 }
 
 static enum parser_result copy_terminal(struct parser_context *ctx, struct ast_terminal *term) {
@@ -65,6 +65,7 @@ static enum parser_result copy_terminal(struct parser_context *ctx, struct ast_t
 
 static void pop_blank_lines(struct parser_context *ctx) {
     while (is_matching_punctuation(ctx, 0, PUNCT_NEWLINE)) {
+        ctx->line++;
         next(ctx);
     }
 }
@@ -244,7 +245,7 @@ bool follows_data_stmt(struct parser_context *ctx) {
 
 static bool follows_exec_stmt(struct parser_context *ctx) {
     return is_matching_kind(ctx, 0, TOKEN_INSTR)
-            || is_matching_kind(ctx, 0, TOKEN_MACRO)
+            //|| is_matching_kind(ctx, 0, TOKEN_MACRO)
             || is_matching_kind(ctx, 0, TOKEN_IDENT)
             || is_matching_directive(ctx, 0, DIR_L)
             || is_matching_directive(ctx, 0, DIR_START);
@@ -315,6 +316,14 @@ enum parser_result parse_data_stmt(struct parser_context *ctx, struct ast_data_s
         goto _error;
     }
 
+    stmt->line = ctx->line;
+
+    if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
+        snprintf(ctx->error_msg,  ERR_MSG_LEN, "expected 'end of statement'");
+        goto _error;
+    }
+    pop_blank_lines(ctx);
+
     return PARSER_OK;
     
 _error:
@@ -348,16 +357,12 @@ enum parser_result parse_byte_stmt(struct parser_context *ctx, struct ast_byte_s
     if (follows_initializer(ctx)) {
         try_else(parse_initializer(ctx, &stmt->init), PARSER_OK, goto _error);
         _init = true;
-        stmt->is_initialized = true;
+        
     } else {
-        stmt->is_initialized = false;
+        stmt->init.kind = AST_INIT_NONE;
     }
 
-    if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        snprintf(ctx->error_msg,  ERR_MSG_LEN, "expected 'end of statement'");
-        goto _error;
-    }
-    pop_blank_lines(ctx);
+    
 
     return PARSER_OK;
 _error:
@@ -405,16 +410,12 @@ enum parser_result parse_bytes_stmt(struct parser_context *ctx, struct ast_bytes
     if (follows_initializer(ctx)) {
         try_else(parse_initializer(ctx, &stmt->init), PARSER_OK, goto _error);
         _init = true;
-        stmt->is_initialized = true;
+        
     } else {
-        stmt->is_initialized = false;
+        stmt->init.kind = AST_INIT_NONE;
     }
 
-    if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "expected 'end of statement'");
-        goto _error;
-    }
-    pop_blank_lines(ctx);
+    
 
     return PARSER_OK;
 _error:
@@ -445,11 +446,7 @@ enum parser_result parse_label_stmt(struct parser_context *ctx, struct ast_label
     }
     next(ctx);
 
-    if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "expected 'end of statement'");
-        goto _error;
-    }
-    pop_blank_lines(ctx);
+   
 
     return PARSER_OK;
 _error:
@@ -538,6 +535,8 @@ enum parser_result parse_numbers(struct parser_context *ctx, struct ast_terminal
     struct ast_terminal number;
 
     if (!is_matching_kind(ctx, 0, TOKEN_NUM)) {
+        *numbers = numbers_v.ptr;
+        *byte_c = numbers_v.length;
         return PARSER_OK;
     }
 
@@ -665,19 +664,20 @@ _error:
 }
 
 enum parser_result parse_exec_stmt(struct parser_context *ctx, struct ast_exec_stmt *stmt) {
-     bool _instr_stmt = false;
-    bool _macro_stmt = false;
+    bool _instr_stmt = false;
+    //bool _macro_stmt = false;
     
 
     if (is_matching_kind(ctx, 0, TOKEN_INSTR)) {
         stmt->kind = AST_EXEC_STMT_INSTRUCTION_STMT;
         try_else(parse_instruction_stmt(ctx, &stmt->instruction_stmt), PARSER_OK, goto _error);
         _instr_stmt = true;
-    } else if (is_matching_kind(ctx, 0, TOKEN_MACRO)) {
+    } /*else if (is_matching_kind(ctx, 0, TOKEN_MACRO)) {
         stmt->kind = AST_EXEC_STMT_MACRO_STMT;
         try_else(parse_macro_stmt(ctx, &stmt->macro_stmt), PARSER_OK, goto _error);
         _macro_stmt = true;
-    } else if (is_matching_kind(ctx, 0, TOKEN_IDENT)) {
+    } */
+    else if (is_matching_kind(ctx, 0, TOKEN_IDENT)) {
         stmt->kind = AST_EXEC_STMT_LABEL_STMT;
         try_else(parse_label_stmt(ctx, &stmt->label_stmt), PARSER_OK, goto _error);
         
@@ -689,12 +689,17 @@ enum parser_result parse_exec_stmt(struct parser_context *ctx, struct ast_exec_s
         stmt->kind = AST_EXEC_STMT_START_STMT;
         try_else(parse_start_stmt(ctx), PARSER_OK, goto _error);
     } else {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected an instruction, macro, label or a local label statement");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected an instruction, label or a local label statement");
         goto _error;
     }
 
+    stmt->line = ctx->line;
 
-    
+    if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
+        snprintf(ctx->error_msg,  ERR_MSG_LEN, "expected 'end of statement'");
+        goto _error;
+    }
+    pop_blank_lines(ctx);
 
 
     return PARSER_OK;
@@ -703,10 +708,11 @@ _error:
     if(_instr_stmt) {
         ast_instruction_stmt_deinit(&stmt->instruction_stmt);
     }
-
+    /*
     if (_macro_stmt) {
         ast_macro_stmt_deinit(&stmt->macro_stmt);
     }
+    */
 
     
 
@@ -726,11 +732,7 @@ enum parser_result parse_start_stmt(struct parser_context *ctx) {
     }
     next(ctx);
 
-    if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "expected 'end of statement'");
-        goto _error;
-    }
-    pop_blank_lines(ctx);
+   
 
     return PARSER_OK;
 
@@ -763,11 +765,7 @@ enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct ast
     try_else(parse_args(ctx, &stmt->args, &stmt->args_c), PARSER_OK, goto _error);
     _args = true;
 
-    if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "expected 'end of statement'");
-        goto _error;
-    }
-    pop_blank_lines(ctx);
+    
 
     return PARSER_OK;
 
@@ -840,6 +838,8 @@ enum parser_result parse_args(struct parser_context *ctx, struct ast_arg **args,
     struct ast_arg arg;
 
     if (!follows_arg(ctx)) {
+        *args = args_v.ptr;
+        *arg_c = args_v.length;
         return PARSER_OK;
     }
 
@@ -900,7 +900,7 @@ enum parser_result parse_arg(struct parser_context *ctx, struct ast_arg *arg) {
         next(ctx);
         
     } else if (is_matching_kind(ctx, 0, TOKEN_SYS_REG)) {
-       arg->kind = AST_ARG_SYS_RES;
+       arg->kind = AST_ARG_SYS_REG;
        try_else(copy_terminal(ctx, &arg->sys_reg), PARSER_OK, goto _error);
        next(ctx);
        
@@ -951,7 +951,7 @@ _error:
     return PARSER_ERR;
 }
 
-enum parser_result parse_label(struct parser_context *ctx, struct ast_terminal *label) {
+enum parser_result parse_label(struct parser_context *ctx, struct ast_label *label) {
 
     
 
@@ -960,7 +960,7 @@ enum parser_result parse_label(struct parser_context *ctx, struct ast_terminal *
         snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a label");
         goto _error;
     }
-    try_else(copy_terminal(ctx, label), PARSER_OK, goto _error);
+    try_else(copy_terminal(ctx, &label->ident), PARSER_OK, goto _error);
     
     next(ctx);
 
@@ -980,13 +980,7 @@ enum parser_result parse_loc_label(struct parser_context *ctx, struct ast_loc_la
     try_else(parse_direction_dir(ctx, &label->dir), PARSER_OK, goto _error);
     
 
-    if (is_matching_punctuation(ctx, 0, PUNCT_LPAR)) {
-        try_else(parse_loc_label_dist(ctx, &label->dist), PARSER_OK, goto _error);
-        
-        label->has_dist = true;
-    } else {
-        label->has_dist = false;
-    }
+    
     
 
     if (!is_matching_kind(ctx, 0, TOKEN_IDENT)) {
@@ -1055,7 +1049,7 @@ _error:
     
     return PARSER_ERR;
 }
-
+/*
 enum parser_result parse_macro_stmt(struct parser_context *ctx, struct ast_macro_stmt *stmt) {
      
     
@@ -1080,11 +1074,7 @@ enum parser_result parse_macro_stmt(struct parser_context *ctx, struct ast_macro
     try_else(parse_args(ctx, &stmt->args, &stmt->args_c), PARSER_OK, goto _error);
     
 
-    if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "expected 'end of statement'");
-        goto _error;
-    }
-    pop_blank_lines(ctx);
+    
 
     return PARSER_OK;
 
@@ -1092,6 +1082,8 @@ _error:
     
     return PARSER_ERR;
 }
+
+*/
 
 enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct ast_loc_label_stmt *stmt) {
     
@@ -1117,11 +1109,7 @@ enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct ast_l
     }
     next(ctx);
 
-    if (!is_matching_punctuation(ctx, 0, PUNCT_NEWLINE) && !is_matching_kind(ctx, 0, TOKEN_EOF)) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "expected 'end of statement'");
-        goto _error;
-    }
-    pop_blank_lines(ctx);
+    
 
     return PARSER_OK;
 _error:

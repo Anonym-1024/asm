@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include "lexer/token.h"
+#include "shared/token.h"
 
 
 struct ast_terminal {
@@ -48,7 +48,8 @@ struct ast_section {
 enum ast_initializer_kind {
     AST_INIT_NUM,
     AST_INIT_ASCII,
-    AST_INIT_BYTE_INIT
+    AST_INIT_BYTE_INIT,
+    AST_INIT_NONE
 };
 
 struct ast_byte_init {
@@ -67,18 +68,19 @@ struct ast_initializer {
 };
 
 struct ast_byte_stmt {
-    bool is_initialized;
     struct ast_initializer init;
 };
 
 struct ast_bytes_stmt {
-    bool is_initialized;
+    
     struct ast_initializer init;
     struct ast_terminal len;
 };
 
 struct ast_label_stmt {
+    
     struct ast_terminal ident;
+    
 };
 
 enum ast_data_stmt_kind {
@@ -88,6 +90,7 @@ enum ast_data_stmt_kind {
 };
 
 struct ast_data_stmt {
+    uint32_t line;
     enum ast_data_stmt_kind kind;
     union {
         struct ast_byte_stmt byte_stmt;
@@ -114,7 +117,10 @@ struct ast_macro_stmt {
 };
 
 struct ast_loc_label_stmt {
-    struct ast_terminal ident;
+    union {
+        struct ast_terminal ident;
+        uint32_t offset;
+    };
 };
 
 enum ast_exec_stmt_kind {
@@ -126,6 +132,7 @@ enum ast_exec_stmt_kind {
 };
 
 struct ast_exec_stmt {
+    uint32_t line;
     enum ast_exec_stmt_kind kind;
     union {
         struct ast_instruction_stmt instruction_stmt;
@@ -143,20 +150,29 @@ struct ast_exec_stmt {
 
 
 struct ast_loc_label {
-    bool has_dist;
     struct ast_terminal dir;
-    struct ast_terminal dist;
-    struct ast_terminal ident;
+    union {
+        struct ast_terminal ident;
+        uint32_t offset;
+    };
 };
+
 
 enum ast_arg_kind {
     AST_ARG_REG,
-    AST_ARG_SYS_RES,
+    AST_ARG_SYS_REG,
     AST_ARG_ADDR_REG,
     AST_ARG_PORT,
     AST_ARG_IMMEDIATE,
     AST_ARG_LABEL,
-    AST_ARG_LOC_LABEL
+    AST_ARG_LOC_LABEL,
+};
+
+struct ast_label {
+    union {
+        struct ast_terminal ident;
+        uint32_t offset;
+    };
 };
 
 struct ast_arg {
@@ -167,7 +183,7 @@ struct ast_arg {
         struct ast_terminal addr_reg;
         struct ast_terminal port;
         struct ast_terminal immediate;
-        struct ast_terminal label;
+        struct ast_label label;
         struct ast_loc_label loc_label;
     };
 };

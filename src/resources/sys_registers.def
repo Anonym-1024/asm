@@ -1,0 +1,6 @@
+X(PC_B0, pc_b0)
+X(PC_B1, pc_b1)
+X(PSR, psr)
+X(INTR, intr)
+X(PDBR_B0, pdbr_b0)
+X(PDBR_B1, pdbr_b1)

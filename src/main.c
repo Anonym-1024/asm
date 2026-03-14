@@ -19,14 +19,13 @@ int main(void) {
 
     char *dd = "resources/example.asm";
     
-    FILE *f = fopen(dd, "r");
+    
 
     
 
-    uint32_t s = get_file_size(dd);
+    
 
-    char *in = malloc(sizeof(char) * s);
-    fread(in, sizeof(char), s, f);
+    FILE *in = fopen(dd, "r");
 
     
     struct token *out;
@@ -35,23 +34,23 @@ int main(void) {
     struct compiler_error err;
 
     
-    enum lexer_result c = tokenise(in, s, &out, &cc, &err);
-    free(in);
-    printf("Lexer done");
-    fflush(stdout);
+    enum lexer_result c = tokenise(in, &out, &cc, &err);
+    fclose(in);
+    printf("Lexer done: %d", cc);
+    
 
     if (c == LEX_ERR) {
         
         print_compiler_error(stdout, &err);
         
    
-        fclose(f);
+        
         
 
 
         return 0;
     }
- 
+    
 
     
     struct ast_file file;
@@ -66,22 +65,20 @@ int main(void) {
         
     } else {
         print_compiler_error(stdout, &err);
-        
+        return 0;
     }
-
-    /*
-    struct sema_context ff;
-    if (build_symbol_tables(&file, &ff) == SEMA_ERR) {
-        print_compiler_error(stdout, &ff.err);
+    
+    
+    if (perform_semantic_analysis(&file, &err) != SEMA_OK) {
+        print_compiler_error(stdout, &err);
     }
-
-    */
-
+    
     for (uint32_t i = 0; i < cc; i++) {
         token_deinit(&out[i]);
 
     }
     free(out);
+    
     
     
     /*struct cst_node pout;

@@ -1,0 +1,6 @@
+X(DATA, .DATA)
+X(EXEC, .EXEC)
+X(START, .start)
+X(L, .l)
+X(B, .b)
+X(F, .f)

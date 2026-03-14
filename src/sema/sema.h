@@ -5,23 +5,11 @@
 
 
 
-#include "parser/ast.h"
-#include "libs/hashmap/hashmap.h"
+#include "shared/ast.h"
 #include "error/compiler_error.h"
+#include "libs/hashmap/hashmap.h"
 
 
-struct sema_context {
-    struct hashmap data_labels;
-    struct hashmap exec_labels;
-    struct hashmap local_labels;
-
-
-    uint32_t data_offset;
-
-    struct compiler_error err;
-
-
-};
 
 enum sema_result {
     SEMA_OK,
@@ -29,6 +17,11 @@ enum sema_result {
 };
 
 
-enum sema_result build_symbol_tables(struct ast_file *file, struct sema_context *ctx);
+enum sema_result build_symbol_tables(struct ast_file *file);
+
+
+
+
+enum sema_result perform_semantic_analysis(struct ast_file *file, struct compiler_error *error);
 
 #endif

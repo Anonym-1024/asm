@@ -146,17 +146,19 @@ void ast_initializer_deinit(struct ast_initializer *node) {
     case AST_INIT_BYTE_INIT:
         free(node->byte_init.numbers);
     break;
+    case AST_INIT_NONE:
+    break;
     }
 }
 
 void ast_byte_stmt_deinit(struct ast_byte_stmt *node) {
-    if (node->is_initialized) {
+    if (node->init.kind != AST_INIT_NONE) {
         ast_initializer_deinit(&node->init);
     }
 }
 
 void ast_bytes_stmt_deinit(struct ast_bytes_stmt *node) {
-    if (node->is_initialized) {
+    if (node->init.kind != AST_INIT_NONE) {
         ast_initializer_deinit(&node->init);
     }
     

@@ -1,0 +1,8 @@
+X(NEWLINE, "\n")
+X(COMMA, ",")
+X(LPAR, "(")
+X(RPAR, ")")
+X(LBRACE, "{")
+X(RBRACE, "}")
+X(HASH, "#")
+X(SEMICOLON, ":")

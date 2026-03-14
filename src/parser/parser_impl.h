@@ -4,8 +4,8 @@
 
 
 #include "error/compiler_error.h"
-#include "lexer/token.h"
-#include "ast.h"
+#include "shared/token.h"
+#include "shared/ast.h"
 
 struct parser_context {
     struct token *in;
@@ -13,7 +13,7 @@ struct parser_context {
     uint32_t index;
 
     uint32_t line;
-    uint32_t col;
+    uint16_t col;
     char error_msg[ERR_MSG_LEN];
 };
 
@@ -70,7 +70,7 @@ enum parser_result parse_arg(struct parser_context *ctx, struct ast_arg *arg);
 
 enum parser_result parse_immediate(struct parser_context *ctx, struct ast_terminal *immediate);
 
-enum parser_result parse_label(struct parser_context *ctx, struct ast_terminal *label);
+enum parser_result parse_label(struct parser_context *ctx, struct ast_label *label);
 
 enum parser_result parse_loc_label(struct parser_context *ctx, struct ast_loc_label *label);
 
@@ -78,7 +78,7 @@ enum parser_result parse_direction_dir(struct parser_context *ctx, struct ast_te
 
 enum parser_result parse_loc_label_dist(struct parser_context *ctx, struct ast_terminal *dist);
 
-enum parser_result parse_macro_stmt(struct parser_context *ctx, struct ast_macro_stmt *stmt);
+//enum parser_result parse_macro_stmt(struct parser_context *ctx, struct ast_macro_stmt *stmt);
 
 enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct ast_loc_label_stmt *stmt);
 

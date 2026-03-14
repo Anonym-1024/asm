@@ -14,7 +14,7 @@
 #include "error/compiler_error.h"
 
 
-#include "token.h"
+#include "shared/token.h"
 
 enum lexer_result {
     LEX_OK,
@@ -25,6 +25,6 @@ enum lexer_result {
 int get_token_desc(struct token *t, char **out);
 
 
-enum lexer_result tokenise(const char *in, uint32_t n, struct token **out, uint32_t *out_n, struct compiler_error *error);
+enum lexer_result tokenise(FILE *in, struct token **out, uint32_t *out_n, struct compiler_error *error);
 
 #endif

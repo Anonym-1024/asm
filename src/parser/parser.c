@@ -10,8 +10,7 @@ enum parser_result parse(struct token *in, uint32_t n, struct ast_file *out, str
         .index = 0,
         
         .line = 1,
-        .col = 1,
-       
+        .col = 1
     };
     strcpy(ctx.error_msg, "Unknown error");
 
