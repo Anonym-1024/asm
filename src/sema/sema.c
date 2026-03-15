@@ -19,6 +19,8 @@ enum sema_arg_type {
     SEMA_ARG_IMM16 = 2 << 5,
     SEMA_ARG_LABEL = 2 << 6,
     SEMA_ARG_LOC_LABEL = 2 << 7,
+    SEMA_ARG_EXEC_LABEL = 2 << 8
+   
 };
 
 
@@ -26,9 +28,8 @@ struct sema_context {
     
     struct hashmap labels;
     struct compiler_error error;
-    uint32_t data_offset;
-    uint32_t exec_offset;
-
+    uint32_t offset;
+    uint32_t data_start;
     enum sema_arg_type instr_f[64][3];
 };
 
@@ -64,7 +65,7 @@ enum sema_result analyze_data_bytes_stmt(struct ast_bytes_stmt *stmt, struct sem
             return SEMA_ERR;
         }
     }
-    ctx->data_offset += stmt->len.token->number;
+    ctx->offset += stmt->len.token->number;
     return SEMA_OK;
 }
 
@@ -92,7 +93,7 @@ enum sema_result analyze_data_byte_stmt(struct ast_byte_stmt *stmt, struct sema_
             return SEMA_ERR;
         }
     }
-    ctx->data_offset += 1;
+    ctx->offset += 1;
     return SEMA_OK;
 }
 
@@ -103,7 +104,7 @@ enum sema_result analyze_data_label_stmt(struct ast_label_stmt *stmt, struct sem
         return SEMA_ERR;
     }
 
-    try_else(hashmap_add(&ctx->labels, stmt->ident.token->lexeme, ctx->data_offset), HMAP_OK, return SEMA_ERR);
+    try_else(hashmap_add(&ctx->labels, stmt->ident.token->lexeme, ctx->offset), HMAP_OK, return SEMA_ERR);
     return SEMA_OK;
 }
 
@@ -125,6 +126,16 @@ _error:
 
 
 enum sema_result analyze_data_section(struct ast_data_section *sec, struct sema_context *ctx) {
+    if (sec->stmts_c == 0) {
+        return SEMA_OK;
+    }
+    struct ast_data_stmt *last = &sec->data_stmts[sec->stmts_c-1];
+    if (last->kind == AST_DATA_STMT_LABEL_STMT) {
+        ctx->error.line = last->line;
+        ctx->error.col = last->label_stmt.ident.token->col;
+        snprintf(ctx->error.msg, ERR_MSG_LEN, "Section cannot end with a label statement.");
+        return SEMA_ERR;
+    }
     for (uint32_t s = 0; s < sec->stmts_c; s++) {
         struct ast_data_stmt *stmt = &sec->data_stmts[s];
         try_else(analyze_data_stmt(stmt, ctx), SEMA_OK, return SEMA_ERR);
@@ -171,7 +182,7 @@ enum sema_result analyze_instruction_stmt(struct ast_instruction_stmt *stmt, str
             snprintf(ctx->error.msg, ERR_MSG_LEN, "Too many arguments.");
             return SEMA_ERR;
         } else if (req == 0) {
-            return SEMA_OK;
+            break;
         }
 
         if (i >= stmt->args_c) {
@@ -218,6 +229,10 @@ enum sema_result analyze_instruction_stmt(struct ast_instruction_stmt *stmt, str
             continue;
         } 
 
+        if ((req & SEMA_ARG_EXEC_LABEL) && arg->kind == AST_ARG_LABEL) {
+            continue;
+        } 
+
         if ((req & SEMA_ARG_LOC_LABEL) && arg->kind == AST_ARG_LOC_LABEL) {
             continue;
         } 
@@ -226,6 +241,8 @@ enum sema_result analyze_instruction_stmt(struct ast_instruction_stmt *stmt, str
         snprintf(ctx->error.msg, ERR_MSG_LEN, "Invalid argument at position %d.", i+1);
         return SEMA_ERR;
     }
+    /// TODO: add
+    ctx->offset += 4;
     return SEMA_OK;
 }
 
@@ -239,7 +256,7 @@ enum sema_result analyze_exec_label_stmt(struct ast_label_stmt *stmt, struct sem
         return SEMA_ERR;
     }
 
-    try_else(hashmap_add(&ctx->labels, stmt->ident.token->lexeme, ctx->exec_offset), HMAP_OK, return SEMA_ERR);
+    try_else(hashmap_add(&ctx->labels, stmt->ident.token->lexeme, ctx->offset), HMAP_OK, return SEMA_ERR);
     return SEMA_OK;
 }
 
@@ -247,17 +264,17 @@ enum sema_result analyze_exec_label_stmt(struct ast_label_stmt *stmt, struct sem
 enum sema_result analyze_exec_start_stmt(struct sema_context *ctx) {
     if (hashmap_find(&ctx->labels, ".start") == HMAP_OK) {
         ctx->error.col = 0;
-        snprintf(ctx->error.msg, ERR_MSG_LEN, "Redefinition of '.start' label.");
+        snprintf(ctx->error.msg, ERR_MSG_LEN, "Redefinition of '.start' label. Only one entry point is allowed.");
         return SEMA_ERR;
     }
 
-    try_else(hashmap_add(&ctx->labels, ".start", ctx->exec_offset), HMAP_OK, return SEMA_ERR);
+    try_else(hashmap_add(&ctx->labels, ".start", ctx->offset), HMAP_OK, return SEMA_ERR);
     return SEMA_OK;
 }
 
 
 enum sema_result analyze_exec_loc_label_stmt(struct ast_loc_label_stmt *stmt, struct sema_context *ctx) {
-    stmt->offset = ctx->exec_offset;
+    stmt->offset = ctx->offset;
     return SEMA_OK;
 }
 
@@ -285,12 +302,49 @@ _error:
 
 
 enum sema_result analyze_exec_section(struct ast_exec_section *sec, struct sema_context *ctx) {
+
+    if (sec->stmts_c == 0) {
+        return SEMA_OK;
+    }
+    struct ast_exec_stmt *last = &sec->exec_stmts[sec->stmts_c-1];
+    if (last->kind == AST_EXEC_STMT_LABEL_STMT || last->kind == AST_EXEC_STMT_LOC_LABEL_STMT) {
+        ctx->error.line = last->line;
+        ctx->error.col = last->label_stmt.ident.token->col;
+        snprintf(ctx->error.msg, ERR_MSG_LEN, "Section cannot end with a label statement.");
+        return SEMA_ERR;
+    }
+    
     for (uint32_t s = 0; s < sec->stmts_c; s++) {
         struct ast_exec_stmt *stmt = &sec->exec_stmts[s];
         try_else(analyze_exec_stmt(stmt, ctx), SEMA_OK, return SEMA_ERR);
     }
     return SEMA_OK;
 }
+
+
+
+
+enum sema_result analyze_exec_sections(struct ast_file *file, struct sema_context *ctx) {
+    
+
+    for (uint32_t s = 0; s < file->sec_n; s++) {
+        struct ast_section *section = &file->sections[s];
+        if (section->kind == AST_EXEC_SECTION) {
+            try_else(analyze_exec_section(&section->exec_section, ctx), SEMA_OK, return SEMA_ERR);
+        }
+    }
+
+    if (hashmap_find(&ctx->labels, ".start") == HMAP_NO_ENTRY) {
+        ctx->error.col = 0;
+        snprintf(ctx->error.msg, ERR_MSG_LEN, "No program entry point has been defined.");
+        return SEMA_ERR;
+    }
+    return SEMA_OK;
+
+}
+
+
+
 
 enum sema_result find_local_label_offset(struct ast_exec_section *sec, uint32_t pos, struct ast_loc_label *l, struct sema_context *ctx) {
     if (l->dir.token->dir == DIR_F) {
@@ -329,6 +383,13 @@ enum sema_result expand_exec_stmt_labels(struct ast_exec_section *sec, uint32_t 
                 snprintf(ctx->error.msg, ERR_MSG_LEN, "Use of undeclared label '%.20s'", arg->label.ident.token->lexeme);
                 goto _error;
             }
+            
+            if (ctx->instr_f[instr->instr.token->instr][i] & SEMA_ARG_EXEC_LABEL && offset >= ctx->data_start) {
+                
+                ctx->error.col = arg->label.ident.token->col;
+                snprintf(ctx->error.msg, ERR_MSG_LEN, "Branch target '%.20s' does not point to an instruction. ", arg->label.ident.token->lexeme);
+                goto _error;
+            }
             arg->label.offset = offset;
         } else if (instr->args[i].kind == AST_ARG_LOC_LABEL) {
             try_else(find_local_label_offset(sec, pos, &arg->loc_label, ctx), SEMA_OK, goto _error);
@@ -350,25 +411,14 @@ enum sema_result expand_exec_section_labels(struct ast_exec_section *sec, struct
     return SEMA_OK;
 }
 
-enum sema_result analyze_exec_sections(struct ast_file *file, struct sema_context *ctx) {
-    
-
-    for (uint32_t s = 0; s < file->sec_n; s++) {
-        struct ast_section *section = &file->sections[s];
-        if (section->kind == AST_EXEC_SECTION) {
-            try_else(analyze_exec_section(&section->exec_section, ctx), SEMA_OK, return SEMA_ERR);
-        }
-    }
-
+enum sema_result expand_labels(struct ast_file *file, struct sema_context *ctx) {
     for (uint32_t s = 0; s < file->sec_n; s++) {
         struct ast_section *section = &file->sections[s];
         if (section->kind == AST_EXEC_SECTION) {
             try_else(expand_exec_section_labels(&section->exec_section, ctx), SEMA_OK, return SEMA_ERR);
         }
     }
-
     return SEMA_OK;
-
 }
 
 
@@ -394,11 +444,11 @@ void init_arg_types(enum sema_arg_type f[64][3]) {
 
 
 
-enum sema_result perform_semantic_analysis(struct ast_file *file, struct compiler_error *error) {
+enum sema_result perform_semantic_analysis(struct ast_file *file, uint32_t *exec_start, uint32_t *data_start, struct compiler_error *error) {
     struct sema_context ctx = {
-        .data_offset = 0,
-        .exec_offset = 0,
-        .error.kind = CERROR_SEMANTIC
+        .offset = 0,
+        .error.kind = CERROR_SEMANTIC,
+        .error.line = 0
     };
     strncpy(ctx.error.msg, "Unknown error.", ERR_MSG_LEN);
     
@@ -407,9 +457,13 @@ enum sema_result perform_semantic_analysis(struct ast_file *file, struct compile
     
     init_arg_types(ctx.instr_f);
 
-    try_else(analyze_data_sections(file, &ctx), SEMA_OK, goto _error);
     try_else(analyze_exec_sections(file, &ctx), SEMA_OK, goto _error);
+    ctx.data_start = ctx.offset;
+    try_else(analyze_data_sections(file, &ctx), SEMA_OK, goto _error);
+    try_else(expand_labels(file, &ctx), SEMA_OK, goto _error);
 
+    hashmap_get(&ctx.labels, ".start", exec_start);
+    *data_start = ctx.data_start;
     return SEMA_OK;
 
 _error:

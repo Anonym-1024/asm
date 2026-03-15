@@ -17,11 +17,11 @@ enum sema_result {
 };
 
 
-enum sema_result build_symbol_tables(struct ast_file *file);
 
 
 
 
-enum sema_result perform_semantic_analysis(struct ast_file *file, struct compiler_error *error);
+
+enum sema_result perform_semantic_analysis(struct ast_file *file, uint32_t *exec_start, uint32_t *data_start, struct compiler_error *error);
 
 #endif

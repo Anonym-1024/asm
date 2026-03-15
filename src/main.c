@@ -68,11 +68,11 @@ int main(void) {
         return 0;
     }
     
-    
-    if (perform_semantic_analysis(&file, &err) != SEMA_OK) {
+    uint32_t s, d;
+    if (perform_semantic_analysis(&file, &s, &d, &err) != SEMA_OK) {
         print_compiler_error(stdout, &err);
     }
-    
+    printf("Start: %d, data start: %d", s, d);
     for (uint32_t i = 0; i < cc; i++) {
         token_deinit(&out[i]);
 
