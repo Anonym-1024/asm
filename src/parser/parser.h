@@ -7,6 +7,7 @@
 #include "shared/ast.h"
 #include "parser_impl.h"
 #include "error/compiler_error.h"
+#include <stdint.h>
 
 #include "libs/vector/vector.h"
 enum parser_result parse(struct token *in, uint32_t n, struct ast_file *out, struct compiler_error *err);

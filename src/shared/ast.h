@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "shared/token.h"
 

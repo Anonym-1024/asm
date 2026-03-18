@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 enum hashmap_result {
     HMAP_OK,

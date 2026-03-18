@@ -3,7 +3,7 @@
 #include "lexer/lexer.h"
 #include "libs/vector/vector.h"
 #include "libs/error_handling.h"
-#include "libs/utilities/utilities.h"
+
 #include "error/compiler_error.h"
 #include <assert.h>
 #include "parser/parser.h"
@@ -12,6 +12,7 @@
 #include "libs/arena/arena.h"
 #include "sema/sema.h"
 #include <time.h>
+#include <stdint.h>
 
 int main(void) {
 

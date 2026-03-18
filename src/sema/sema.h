@@ -8,6 +8,7 @@
 #include "shared/ast.h"
 #include "error/compiler_error.h"
 #include "libs/hashmap/hashmap.h"
+#include <stdint.h>
 
 
 

@@ -2,6 +2,7 @@
 #define __TOKEN_HEADER__
 
 #include <stdlib.h>
+#include <stdint.h>
 
 enum token_kind {
     TOKEN_DIR,

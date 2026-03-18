@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 
 enum compiler_error_kind {

@@ -6,6 +6,7 @@
 #include "error/compiler_error.h"
 #include "shared/token.h"
 #include "shared/ast.h"
+#include <stdint.h>
 
 struct parser_context {
     struct token *in;

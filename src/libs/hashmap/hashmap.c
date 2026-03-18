@@ -2,8 +2,8 @@
 #include "hashmap.h"
 
 
-static u_int64_t hash_64fnv(const void *data, size_t len) {
-    const u_int8_t *bytes = (const u_int8_t *)data;
+static uint64_t hash_64fnv(const void *data, size_t len) {
+    const uint8_t *bytes = (const uint8_t *)data;
 
     // FNV-1a 64-bit constants
     uint64_t hash = 1469598103934665603ULL;  // offset basis
@@ -17,7 +17,7 @@ static u_int64_t hash_64fnv(const void *data, size_t len) {
     return hash;
 }
 
-static u_int64_t shash_64fnv(const char *str) {
+static uint64_t shash_64fnv(const char *str) {
     return hash_64fnv(str, strlen(str));
 }
 

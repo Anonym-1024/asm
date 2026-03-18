@@ -5,9 +5,12 @@
     br d
     
 .DATA:
+    d:
     c:
     bytes(8) {8,9,9,0}
     a:
+    byte
+    d:
     byte
 .EXEC:
 

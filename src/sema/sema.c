@@ -100,7 +100,7 @@ enum sema_result analyze_data_byte_stmt(struct ast_byte_stmt *stmt, struct sema_
 enum sema_result analyze_data_label_stmt(struct ast_label_stmt *stmt, struct sema_context *ctx) {
     if (hashmap_find(&ctx->labels, stmt->ident.token->lexeme) == HMAP_OK) {
         ctx->error.col = stmt->ident.token->col;
-        snprintf(ctx->error.msg, ERR_MSG_LEN, "Redefinition of label '.20%s'.", stmt->ident.token->lexeme);
+        snprintf(ctx->error.msg, ERR_MSG_LEN, "Redefinition of label '%.20s'.", stmt->ident.token->lexeme);
         return SEMA_ERR;
     }
 
