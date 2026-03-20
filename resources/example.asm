@@ -1,17 +1,12 @@
+
 .EXEC:
-    mov r4, #5
+    
+    mov r6, #0Fx
     .start:
-    ldr r4, #-23
-    br d
+    ldr r8, d
+    exit
     
 .DATA:
-    d:
-    c:
-    bytes(8) {8,9,9,0}
-    a:
-    byte
-    d:
-    byte
-.EXEC:
+d:
+    bytes(700) 
 
-        

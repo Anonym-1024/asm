@@ -24,8 +24,8 @@ condition_code = "(", ?TOKEN_COND_CODE?, ")";
 args = [ arg, { ",", arg} ];
 arg = ?TOKEN_REG? | ?TOKEN_SYS_REG? | ?TOKEN_ADDR_REG? | ?TOKEN_PORT? | immediate | label | loc_label;
 immediate = "#", ?TOKEN_NUM?;
-label = ?TOKEN_IDENT?;
-loc_label = direction_dir, [loc_label_dist], ?TOKEN_IDENT?;
+label = "=", ?TOKEN_IDENT?;
+loc_label = direction_dir, "=", ?TOKEN_IDENT?;
 direction_dir = ".f" | ".b";
 loc_label_dist = "(", ?TOKEN_NUM?, ")";
 

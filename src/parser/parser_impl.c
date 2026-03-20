@@ -819,7 +819,7 @@ static bool follows_arg(struct parser_context *ctx) {
         is_matching_kind(ctx, 0, TOKEN_SYS_REG) ||
         is_matching_kind(ctx, 0, TOKEN_ADDR_REG) ||
         is_matching_kind(ctx, 0, TOKEN_PORT) ||
-        is_matching_kind(ctx, 0, TOKEN_IDENT) ||
+        is_matching_punctuation(ctx, 0, PUNCT_EQUALS) ||
         is_matching_punctuation(ctx, 0, PUNCT_HASH) ||
         is_matching_directive(ctx, 0, DIR_F) ||
         is_matching_directive(ctx, 0, DIR_B);
@@ -882,7 +882,7 @@ enum parser_result parse_arg(struct parser_context *ctx, struct ast_arg *arg) {
     
 
 
-    if (is_matching_kind(ctx, 0, TOKEN_IDENT)) {
+    if (is_matching_punctuation(ctx, 0, PUNCT_EQUALS)) {
         arg->kind = AST_ARG_LABEL;
         try_else(parse_label(ctx, &arg->label), PARSER_OK, goto _error);
         
@@ -915,7 +915,7 @@ enum parser_result parse_arg(struct parser_context *ctx, struct ast_arg *arg) {
        next(ctx);
        
     } else {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected argument, found instead.");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected argument.");
         goto _error;
     }
 
@@ -954,10 +954,15 @@ _error:
 enum parser_result parse_label(struct parser_context *ctx, struct ast_label *label) {
 
     
-
+    if (!is_matching_punctuation(ctx, 0, PUNCT_EQUALS)) {
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a '='");
+        goto _error;
+    }
+    next(ctx);
+    
 
     if (!is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a label");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a label afted '='");
         goto _error;
     }
     try_else(copy_terminal(ctx, &label->ident), PARSER_OK, goto _error);
@@ -980,11 +985,15 @@ enum parser_result parse_loc_label(struct parser_context *ctx, struct ast_loc_la
     try_else(parse_direction_dir(ctx, &label->dir), PARSER_OK, goto _error);
     
 
-    
+    if (!is_matching_punctuation(ctx, 0, PUNCT_EQUALS)) {
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a '='");
+        goto _error;
+    }
+    next(ctx);
     
 
     if (!is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a label");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a label after '='");
         goto _error;
     }
     try_else(copy_terminal(ctx, &label->ident), PARSER_OK, goto _error);

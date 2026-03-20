@@ -18,12 +18,12 @@ enum compiler_error_kind {
 
 struct compiler_error {
     enum compiler_error_kind kind;
-    uint32_t line;
-    uint32_t col;
+    size_t line;
+    size_t col;
     char msg[ERR_MSG_LEN];
 };
 
-void compiler_error_deinit(struct compiler_error *err);
+
 
 void print_compiler_error(FILE *file, struct compiler_error *err);
 

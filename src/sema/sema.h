@@ -23,6 +23,6 @@ enum sema_result {
 
 
 
-enum sema_result perform_semantic_analysis(struct ast_file *file, uint32_t *exec_start, uint32_t *data_start, struct compiler_error *error);
+enum sema_result perform_semantic_analysis(struct ast_file *file, uint32_t *start_addr, struct compiler_error *error);
 
 #endif

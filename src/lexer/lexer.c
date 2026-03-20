@@ -65,7 +65,7 @@ static bool is_whitespace_char(char c) {
 }
 
 static bool is_punctuation_char(char c) {
-    return (c == ',') || (c == '{') || (c == '}') || (c == ':') || (c == '(') || (c == ')') || (c == '#');
+    return (c == ',') || (c == '{') || (c == '}') || (c == ':') || (c == '(') || (c == ')') || (c == '#') || (c == '=');
 }
 
 
@@ -582,6 +582,7 @@ enum lexer_result tokenise(FILE *in, struct token **out, uint32_t *out_n, struct
     
     next(&ctx);
     while (ctx.c != EOF) {
+        
         if (ctx.c == ';') {
             try_else(read_comment(&ctx), LEX_OK, goto _error);
             
@@ -626,6 +627,10 @@ enum lexer_result tokenise(FILE *in, struct token **out, uint32_t *out_n, struct
 
     try_else(vec_push(&ctx.out, &eof), VEC_OK, goto _error);
 
+    if (ctx.out.length > UINT32_MAX) {
+        snprintf(ctx.error_msg, ERR_MSG_LEN, "File is too large.");
+        goto _error;
+    }
 
     *out = ctx.out.ptr;
     *out_n = ctx.out.length;

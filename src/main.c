@@ -1,105 +1,120 @@
 
 
-#include "lexer/lexer.h"
-#include "libs/vector/vector.h"
-#include "libs/error_handling.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "error/compiler_error.h"
-#include <assert.h>
+#include "lexer/lexer.h"
+#include "shared/token.h"
+#include "shared/ast.h"
 #include "parser/parser.h"
-#include <unistd.h>
-#include "libs/hashmap/hashmap.h"
-#include "libs/arena/arena.h"
 #include "sema/sema.h"
-#include <time.h>
-#include <stdint.h>
-
-int main(void) {
+#include "codegen/codegen.h"
 
 
 
-    char *dd = "resources/example.asm";
-    
-    
-
-    
-
-    
-
-    FILE *in = fopen(dd, "r");
-
-    
-    struct token *out;
-    uint32_t cc;
-    
-    struct compiler_error err;
-
-    
-    enum lexer_result c = tokenise(in, &out, &cc, &err);
-    fclose(in);
-    printf("Lexer done: %d", cc);
-    
-
-    if (c == LEX_ERR) {
-        
-        print_compiler_error(stdout, &err);
-        
-   
-        
-        
 
 
-        return 0;
+
+
+
+int main(int argc, char **argv) {
+
+    if (argc < 2) {
+        printf("\033[31mNo input file.\n");
+        return -1;
     }
-    
+    if (argc > 2) {
+        printf("\033[31mToo many arguments.\n");
+        return -1;
+    }
 
-    
-    struct ast_file file;
-    enum parser_result ss = parse(out, cc, &file, &err);
-    
-    if (ss == PARSER_OK) {
-        
-        
-        
-        printf("Hura");
-        
-        
+    FILE *input;
+    if (strcmp("-s", argv[1]) == 0) {
+        input = stdin;
     } else {
-        print_compiler_error(stdout, &err);
-        return 0;
+        input = fopen(argv[1], "r");
     }
-    
-    uint32_t s, d;
-    if (perform_semantic_analysis(&file, &s, &d, &err) != SEMA_OK) {
-        print_compiler_error(stdout, &err);
+    if (input == NULL) {
+        printf("\033[31mCould not open file '%.100s'.\n", argv[1]);
+        return -1;
     }
-    printf("Start: %d, data start: %d", s, d);
-    for (uint32_t i = 0; i < cc; i++) {
-        token_deinit(&out[i]);
 
+
+
+
+    struct compiler_error error;
+
+    struct token *tokens;
+    uint32_t tokens_n;
+
+    enum lexer_result lex_res = tokenise(input, &tokens, &tokens_n, &error);
+
+    if (lex_res == LEX_ERR) {
+        print_compiler_error(stderr, &error);
+        return -1;
     }
-    free(out);
-    
-    
-    
-    /*struct cst_node pout;
-    struct parser_error perr;
-    enum parser_result pres = parse(out.ptr, out.length, &pout, &perr);
-    if (pres == PARSER_OK) {
-        print_cst_node(stdout, &pout, 0);
-    } else {
-        char *desc;
-        parser_error_desc(&perr, &desc);
-        printf("%s", desc);
-        free(desc);
+
+
+
+
+
+
+
+    struct ast_file root;
+
+    enum parser_result pars_res = parse(tokens, tokens_n, &root, &error);
+
+    if (pars_res == PARSER_ERR) {
+        print_compiler_error(stderr, &error);
+        for (uint32_t i = 0; i < tokens_n; i++) {
+            token_deinit(&tokens[i]);
+        }
+        return -1;
     }
+
     
 
-    free(perr.msg);
-    cst_node_deinit(&pout);
-    free(in);
-    vec_deinit(&out, &_token_deinit);
-    fclose(f);
-    */
+
+
+
+
+    uint32_t start_addr;
+
+    enum sema_result sema_res = perform_semantic_analysis(&root, &start_addr, &error);
+
+    if (sema_res == SEMA_ERR) {
+        print_compiler_error(stderr, &error);
+        for (uint32_t i = 0; i < tokens_n; i++) {
+            token_deinit(&tokens[i]);
+        }
+        ast_file_deinit(&root);
+        return -1;
+    }
+
+
+    FILE *output = fopen("a.bin", "w");
+    if (output == NULL) {
+        printf("\033[31mCould not create binary file.");
+        for (uint32_t i = 0; i < tokens_n; i++) {
+            token_deinit(&tokens[i]);
+        }
+        ast_file_deinit(&root);
+    }
+
+    generate_binary(&root, start_addr, output);
+
+
+
+    for (uint32_t i = 0; i < tokens_n; i++) {
+        token_deinit(&tokens[i]);
+    }
+
+    ast_file_deinit(&root);
+
+
+
     return 0;
 }

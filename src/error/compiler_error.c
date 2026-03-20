@@ -22,5 +22,5 @@ void print_compiler_error(FILE *file, struct compiler_error *err) {
         kind_s = "";
         break;
     }
-    fprintf(file, "\033[31m*** %s [%d:%d]: %s\n", kind_s, err->line, err->col, err->msg);
+    fprintf(file, "\033[31m*** %s [%ld:%ld]: %s\n", kind_s, err->line, err->col, err->msg);
 }

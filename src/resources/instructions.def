@@ -61,3 +61,6 @@ X(PTW, ptw, SEMA_ARG_PORT, SEMA_ARG_REG, 0)
 X(PTSR, ptsr, SEMA_ARG_REG, 0, 0)
 
 X(SVC, svc, 0, 0, 0)
+
+
+X(EXIT, exit , 0, 0, 0)
