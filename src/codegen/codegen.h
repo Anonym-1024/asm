@@ -3,14 +3,20 @@
 #define __CODEGEN_HEADER__
 
 
-#include "shared/ast.h"
+
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-void generate_binary(struct ast_file *file, uint16_t start, FILE *out);
+#include "shared/ast.h"
+#include "shared/compiled_object.h"
+#include "error/compiler_error.h"
 
 
+
+enum codegen_result {
+    CODEGEN_OK,
+    CODEGEN_ERR
+};
+
+
+enum codegen_result generate_compiled_object(struct ast_file *file, struct compiled_object *obj, struct compiler_error *err);
 
 #endif

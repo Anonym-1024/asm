@@ -575,7 +575,7 @@ enum lexer_result tokenise(FILE *in, struct token **out, uint32_t *out_n, struct
 
     try_else(vec_init(&ctx.buffer, 6, sizeof(char)), VEC_OK, goto _error);
     ctx._buffer = true;
-    try_else(vec_init(&ctx.out, 1000, sizeof(struct token)), VEC_OK, goto _error);
+    try_else(vec_init(&ctx.out, 100, sizeof(struct token)), VEC_OK, goto _error);
     _out = true;
 
 

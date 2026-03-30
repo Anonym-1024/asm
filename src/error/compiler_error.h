@@ -25,6 +25,6 @@ struct compiler_error {
 
 
 
-void print_compiler_error(FILE *file, struct compiler_error *err);
+void print_compiler_error(FILE *file, struct compiler_error *err, char *source);
 
 #endif

@@ -53,13 +53,13 @@ int main(int argc, char **argv) {
     enum lexer_result lex_res = tokenise(input, &tokens, &tokens_n, &error);
 
     if (lex_res == LEX_ERR) {
-        print_compiler_error(stderr, &error);
+        print_compiler_error(stderr, &error, argv[1]);
         return -1;
     }
 
 
 
-
+    fclose(input);
 
 
 
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     enum parser_result pars_res = parse(tokens, tokens_n, &root, &error);
 
     if (pars_res == PARSER_ERR) {
-        print_compiler_error(stderr, &error);
+        print_compiler_error(stderr, &error, argv[1]);
         for (uint32_t i = 0; i < tokens_n; i++) {
             token_deinit(&tokens[i]);
         }
@@ -81,12 +81,12 @@ int main(int argc, char **argv) {
 
 
 
-    uint32_t start_addr;
+    //uint32_t start_addr;
 
-    enum sema_result sema_res = perform_semantic_analysis(&root, &start_addr, &error);
+    enum sema_result sema_res = perform_semantic_analysis(&root, &error);
 
     if (sema_res == SEMA_ERR) {
-        print_compiler_error(stderr, &error);
+        print_compiler_error(stderr, &error, argv[1]);
         for (uint32_t i = 0; i < tokens_n; i++) {
             token_deinit(&tokens[i]);
         }
@@ -95,22 +95,16 @@ int main(int argc, char **argv) {
     }
 
 
-    FILE *output = fopen("a.bin", "w");
-    if (output == NULL) {
-        printf("\033[31mCould not create binary file.");
-        for (uint32_t i = 0; i < tokens_n; i++) {
-            token_deinit(&tokens[i]);
-        }
-        ast_file_deinit(&root);
-    }
+    
 
-    generate_binary(&root, start_addr, output);
+    //generate_binary(&root, start_addr, output);
 
 
 
     for (uint32_t i = 0; i < tokens_n; i++) {
         token_deinit(&tokens[i]);
     }
+    free(tokens);
 
     ast_file_deinit(&root);
 

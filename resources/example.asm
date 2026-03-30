@@ -1,12 +1,10 @@
-
 .EXEC:
     
-    mov r6, #0Fx
-    .start:
-    ldr r8, d
+    mov r6, #06x
+    .stafrt:
+    ldr r8, =d
     exit
     
 .DATA:
 d:
-    bytes(700) 
-
+    bytes(7) "ahoj" 
