@@ -118,10 +118,7 @@ struct ast_macro_stmt {
 };
 
 struct ast_loc_label_stmt {
-    union {
-        struct ast_terminal ident;
-        uint32_t offset;
-    };
+    struct ast_terminal ident;
 };
 
 enum ast_exec_stmt_kind {
@@ -152,10 +149,7 @@ struct ast_exec_stmt {
 
 struct ast_loc_label {
     struct ast_terminal dir;
-    union {
-        struct ast_terminal ident;
-        uint32_t offset;
-    };
+    struct ast_terminal ident;
 };
 
 
@@ -170,10 +164,7 @@ enum ast_arg_kind {
 };
 
 struct ast_label {
-    union {
-        struct ast_terminal ident;
-        uint32_t offset;
-    };
+    struct ast_terminal ident;
 };
 
 struct ast_arg {

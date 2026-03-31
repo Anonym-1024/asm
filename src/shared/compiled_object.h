@@ -4,7 +4,7 @@
 
 #include "libs/hashmap/hashmap.h"
 #include <stdint.h>
-
+#include <stdbool.h>
 
 
 struct compiled_instruction {
@@ -16,6 +16,7 @@ struct compiled_instruction {
 };
 
 struct compiled_object {
+    uint32_t symbol_table_len;
     struct hashmap symbol_table;
     uint32_t exec_len;
     struct compiled_instruction *exec;

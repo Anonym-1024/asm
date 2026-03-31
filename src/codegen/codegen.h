@@ -6,6 +6,8 @@
 
 #include <stdint.h>
 #include "shared/ast.h"
+#include "libs/error_handling.h"
+#include "libs/vector/vector.h"
 #include "shared/compiled_object.h"
 #include "error/compiler_error.h"
 
@@ -17,6 +19,6 @@ enum codegen_result {
 };
 
 
-enum codegen_result generate_compiled_object(struct ast_file *file, struct compiled_object *obj, struct compiler_error *err);
+enum codegen_result generate_compiled_object(struct ast_file *file, FILE *obj, struct compiler_error *err);
 
 #endif
