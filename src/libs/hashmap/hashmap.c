@@ -1,5 +1,7 @@
 
 #include "hashmap.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 
 static uint64_t hash_64fnv(const void *data, size_t len) {
@@ -156,4 +158,19 @@ void hashmap_deinit(struct hashmap *hm) {
 
 }
 
+
+size_t hashmap_get_item_count(struct hashmap *hm) {
+    size_t n = 0;
+
+    for (size_t i = 0; i < hm->size; i++) {
+        struct hashmap_item *item = hm->table[i];
+
+        while (item != NULL) {
+            n += 1;
+            item = item->next;
+        }
+    }
+
+    return n;
+}
 

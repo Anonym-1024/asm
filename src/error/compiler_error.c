@@ -18,6 +18,14 @@ void print_compiler_error(FILE *file, struct compiler_error *err, char *source) 
         kind_s = "SEMANTIC ERROR";
         break;
 
+        case CERROR_CODEGEN:
+        kind_s = "CODEGEN ERROR";
+        break;
+
+        case CERROR_LINKER:
+        kind_s = "LINKER ERROR";
+        break;
+
         default:
         kind_s = "";
         break;

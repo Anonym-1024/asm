@@ -7,6 +7,7 @@
 
 #include "error/compiler_error.h"
 #include "lexer/lexer.h"
+#include "shared/sema_output.h"
 #include "shared/token.h"
 #include "shared/ast.h"
 #include "parser/parser.h"
@@ -82,8 +83,8 @@ int main(int argc, char **argv) {
 
 
     //uint32_t start_addr;
-
-    enum sema_result sema_res = perform_semantic_analysis(&root, &error);
+    struct sema_output o;
+    enum sema_result sema_res = perform_semantic_analysis(&root, &o, &error);
 
     if (sema_res == SEMA_ERR) {
         print_compiler_error(stderr, &error, argv[1]);
@@ -95,6 +96,13 @@ int main(int argc, char **argv) {
     }
 
 
+    FILE *output = fopen("out.bin", "wb");
+
+    enum codegen_result kk = generate_object_file(&root, &o, output, &error);
+    if (kk != CODEGEN_OK) {
+        print_compiler_error(stderr, &error, argv[1]);
+        
+    }
     
 
     //generate_binary(&root, start_addr, output);
@@ -108,7 +116,7 @@ int main(int argc, char **argv) {
 
     ast_file_deinit(&root);
 
-
+    fclose(output);
 
     return 0;
 }

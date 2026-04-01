@@ -11,7 +11,9 @@
 enum compiler_error_kind {
     CERROR_LEXER,
     CERROR_PARSER,
-    CERROR_SEMANTIC
+    CERROR_SEMANTIC,
+    CERROR_CODEGEN,
+    CERROR_LINKER
 };
 
 #define ERR_MSG_LEN 100

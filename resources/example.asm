@@ -1,10 +1,12 @@
 .EXEC:
     
-    mov r6, #06x
-    .stafrt:
-    ldr r8, =d
+    mov(ses) r6, #0f6x
+    .l stitek:
+    .start:
+    e:
+    ldr r8, .b=stitek
     exit
     
 .DATA:
 d:
-    bytes(7) "ahoj" 
+    bytes(5) "ahoj"
