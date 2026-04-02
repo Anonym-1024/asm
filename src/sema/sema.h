@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include "shared/ast.h"
 #include "error/compiler_error.h"
+#include "libs/hashmap/hashmap.h"
+#include "shared/sema_output.h"
 
 
 
@@ -16,7 +18,7 @@ enum sema_result {
 };
 
 
-enum sema_result perform_semantic_analysis(struct ast_file *file, struct compiler_error *error);
+enum sema_result perform_semantic_analysis(struct ast_file *file, struct sema_output *out, struct compiler_error *error);
 
 
 

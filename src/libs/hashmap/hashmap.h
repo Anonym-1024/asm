@@ -4,6 +4,7 @@
 
 
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -41,6 +42,8 @@ enum hashmap_result hashmap_get(const struct hashmap *hm, const char *key, uint3
 enum hashmap_result hashmap_find(const struct hashmap *hm, const char *key);
 
 enum hashmap_result hashmap_remove(struct hashmap *hm, const char *key);
+
+size_t hashmap_get_item_count(struct hashmap *hm);
 
 void hashmap_deinit(struct hashmap *hm);
 

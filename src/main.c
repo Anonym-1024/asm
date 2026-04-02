@@ -7,6 +7,8 @@
 
 #include "error/compiler_error.h"
 #include "lexer/lexer.h"
+#include "linker/linker.h"
+#include "shared/sema_output.h"
 #include "shared/token.h"
 #include "shared/ast.h"
 #include "parser/parser.h"
@@ -53,7 +55,7 @@ int main(int argc, char **argv) {
     enum lexer_result lex_res = tokenise(input, &tokens, &tokens_n, &error);
 
     if (lex_res == LEX_ERR) {
-        print_compiler_error(stderr, &error, argv[1]);
+        print_compiler_error(stderr, &error);
         return -1;
     }
 
@@ -68,7 +70,7 @@ int main(int argc, char **argv) {
     enum parser_result pars_res = parse(tokens, tokens_n, &root, &error);
 
     if (pars_res == PARSER_ERR) {
-        print_compiler_error(stderr, &error, argv[1]);
+        print_compiler_error(stderr, &error);
         for (uint32_t i = 0; i < tokens_n; i++) {
             token_deinit(&tokens[i]);
         }
@@ -82,11 +84,11 @@ int main(int argc, char **argv) {
 
 
     //uint32_t start_addr;
-
-    enum sema_result sema_res = perform_semantic_analysis(&root, &error);
+    struct sema_output o;
+    enum sema_result sema_res = perform_semantic_analysis(&root, &o, &error);
 
     if (sema_res == SEMA_ERR) {
-        print_compiler_error(stderr, &error, argv[1]);
+        print_compiler_error(stderr, &error);
         for (uint32_t i = 0; i < tokens_n; i++) {
             token_deinit(&tokens[i]);
         }
@@ -95,6 +97,13 @@ int main(int argc, char **argv) {
     }
 
 
+    FILE *output = fopen("out.bin", "wb");
+
+    enum codegen_result kk = generate_object_file(&root, &o, output, &error);
+    if (kk != CODEGEN_OK) {
+        print_compiler_error(stderr, &error);
+        
+    }
     
 
     //generate_binary(&root, start_addr, output);
@@ -108,7 +117,10 @@ int main(int argc, char **argv) {
 
     ast_file_deinit(&root);
 
+    fclose(output);
 
+    const char *obj = "out.bin";
+    link_object_files(&obj, 1, "out1.obj", &error);
 
     return 0;
 }
