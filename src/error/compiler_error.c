@@ -3,7 +3,7 @@
 
 
 
-void print_compiler_error(FILE *file, struct compiler_error *err, char *source) {
+void print_compiler_error(FILE *file, struct compiler_error *err) {
 
     const char *kind_s;
     switch (err->kind) {
@@ -30,5 +30,5 @@ void print_compiler_error(FILE *file, struct compiler_error *err, char *source) 
         kind_s = "";
         break;
     }
-    fprintf(file, "\033[31m*** %s [%s:%ld:%ld]: %s\n", kind_s, source, err->line, err->col, err->msg);
+    fprintf(file, "\033[31m*** %s [%s:%ld:%ld]: %s\n", kind_s, err->file, err->line, err->col, err->msg);
 }

@@ -9,4 +9,4 @@
     
 .DATA:
 d:
-    bytes(5) "ahoj"
+    bytes(9) "ahoj"

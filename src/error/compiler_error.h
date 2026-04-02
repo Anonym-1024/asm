@@ -23,10 +23,11 @@ struct compiler_error {
     size_t line;
     size_t col;
     char msg[ERR_MSG_LEN];
+    const char *file;
 };
 
 
 
-void print_compiler_error(FILE *file, struct compiler_error *err, char *source);
+void print_compiler_error(FILE *file, struct compiler_error *err);
 
 #endif
