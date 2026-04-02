@@ -6,14 +6,8 @@
 #include <string.h>
 
 #include "error/compiler_error.h"
-#include "lexer/lexer.h"
+#include "compilation/compilation.h"
 #include "linker/linker.h"
-#include "shared/sema_output.h"
-#include "shared/token.h"
-#include "shared/ast.h"
-#include "parser/parser.h"
-#include "sema/sema.h"
-#include "codegen/codegen.h"
 
 
 
@@ -22,105 +16,73 @@
 
 
 
-int main(int argc, char **argv) {
+int main(int argc, const char **argv) {
 
-    if (argc < 2) {
-        printf("\033[31mNo input file.\n");
-        return -1;
-    }
-    if (argc > 2) {
-        printf("\033[31mToo many arguments.\n");
-        return -1;
-    }
+    const char *output = NULL;
+    const char *c_input = NULL;
+    const char **l_input = NULL;
+    int l_input_len = 0;
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-o") == 0) {
+            if (i+1 >= argc) {
+                printf("\033[31mExpected output file name after '-o'.");
+                return -1;
+            }
 
-    FILE *input;
-    if (strcmp("-s", argv[1]) == 0) {
-        input = stdin;
-    } else {
-        input = fopen(argv[1], "r");
-    }
-    if (input == NULL) {
-        printf("\033[31mCould not open file '%.100s'.\n", argv[1]);
-        return -1;
-    }
-
-
-
-
-    struct compiler_error error;
-
-    struct token *tokens;
-    uint32_t tokens_n;
-
-    enum lexer_result lex_res = tokenise(input, &tokens, &tokens_n, &error);
-
-    if (lex_res == LEX_ERR) {
-        print_compiler_error(stderr, &error);
-        return -1;
-    }
-
-
-
-    fclose(input);
-
-
-
-    struct ast_file root;
-
-    enum parser_result pars_res = parse(tokens, tokens_n, &root, &error);
-
-    if (pars_res == PARSER_ERR) {
-        print_compiler_error(stderr, &error);
-        for (uint32_t i = 0; i < tokens_n; i++) {
-            token_deinit(&tokens[i]);
+            output = argv[i+1];
         }
-        return -1;
-    }
 
-    
+        if (strcmp(argv[i], "-c") == 0) {
+            if (i+1 >= argc) {
+                printf("\033[31mExpected input file name after '-c'.");
+                return -1;
+            }
 
-
-
-
-
-    //uint32_t start_addr;
-    struct sema_output o;
-    enum sema_result sema_res = perform_semantic_analysis(&root, &o, &error);
-
-    if (sema_res == SEMA_ERR) {
-        print_compiler_error(stderr, &error);
-        for (uint32_t i = 0; i < tokens_n; i++) {
-            token_deinit(&tokens[i]);
+            c_input = argv[i+1];
         }
-        ast_file_deinit(&root);
-        return -1;
-    }
 
+        if (strcmp(argv[i], "-l") == 0) {
 
-    FILE *output = fopen("out.bin", "wb");
+            for (int j = i+1; j < argc && argv[j][0] != '-'; j++) {
+                l_input_len++;
+            }
 
-    enum codegen_result kk = generate_object_file(&root, &o, output, &error);
-    if (kk != CODEGEN_OK) {
-        print_compiler_error(stderr, &error);
+            if (l_input_len == 0) {
+                printf("\033[31mExpected input files after '-l'.");
+                return -1;
+            }
+            l_input = &argv[i+1];
+
+        }
         
     }
-    
 
-    //generate_binary(&root, start_addr, output);
-
-
-
-    for (uint32_t i = 0; i < tokens_n; i++) {
-        token_deinit(&tokens[i]);
+    if (c_input != NULL && l_input != NULL) {
+        printf("\033[31mConnot use both '-l' and '-c' at the same time.");
+        return -1;
     }
-    free(tokens);
-
-    ast_file_deinit(&root);
-
-    fclose(output);
-
-    const char *obj = "out.bin";
-    link_object_files(&obj, 1, "out1.obj", &error);
+    
+    struct compiler_error error;
+    if (c_input != NULL) {
+        enum compilation_result c_res;
+        c_res = compile_source_file(c_input, output, &error);
+        if (c_res != COMP_OK) {
+            print_compiler_error(stderr, &error);
+            return -1;
+        }
+        
+    } else if (l_input != NULL) {
+        enum linker_result l_res;
+        l_res = link_object_files(l_input, l_input_len, output, &error);
+        if (l_res != LINK_OK) {
+            print_compiler_error(stderr, &error);
+            return -1;
+        }
+        
+    } else {
+        printf("\033[31mUse '-c <file>' or '-l <files>'.");
+        return -1;
+    }
 
     return 0;
 }

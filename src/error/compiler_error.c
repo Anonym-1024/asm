@@ -26,6 +26,10 @@ void print_compiler_error(FILE *file, struct compiler_error *err) {
         kind_s = "LINKER ERROR";
         break;
 
+        case CERROR_UNKNOWN:
+        kind_s = "UNKNOWN ERROR";
+        break;
+
         default:
         kind_s = "";
         break;

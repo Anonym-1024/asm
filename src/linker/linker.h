@@ -4,12 +4,11 @@
 
 
 
-
-
-
-
 #include "error/compiler_error.h"
 #include <stdio.h>
+
+
+
 enum linker_result {
     LINK_OK,
     LINK_ERR

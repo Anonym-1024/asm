@@ -18,6 +18,7 @@ struct ast_terminal {
 struct ast_file {
     struct ast_section *sections;
     uint32_t sec_n;
+    const char *filename;
 };
 
 
@@ -118,7 +119,10 @@ struct ast_macro_stmt {
 };
 
 struct ast_loc_label_stmt {
-    struct ast_terminal ident;
+    union {
+        struct ast_terminal ident;
+        uint32_t offset;
+    };
 };
 
 enum ast_exec_stmt_kind {

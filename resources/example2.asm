@@ -2,10 +2,10 @@
     
     mov(ses) r6, #0f6x
     
-    j:
+    f:
     ldr r8, =g
     exit
     
 .DATA:
-l:
-    bytes(10) "ahojjjdj"
+g:
+    bytes(9) "nazdar"

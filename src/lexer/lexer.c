@@ -552,11 +552,11 @@ _error:
     return LEX_ERR;
 }
 
-enum lexer_result tokenise(FILE *in, struct token **out, uint32_t *out_n, struct compiler_error *error) {
+enum lexer_result tokenise(struct source_file *in, struct token **out, uint32_t *out_n, struct compiler_error *error) {
 
-    
+    error->file = in->filename;
     struct lexer_context ctx = {
-        .in = in,
+        .in = in->file,
     
 
         .line = 1,

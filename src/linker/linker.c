@@ -98,18 +98,21 @@ static void close_obj_files(struct object_file *objs, int obj_n) {
 enum linker_result open_obj_files(const char **files, int files_n, struct object_file **objs, struct compiler_error *err) {
 
     *objs = malloc(sizeof(struct object_file) * files_n);
-    if (objs == NULL) {
+    if (*objs == NULL) {
         return LINK_ERR;
     }
-    for (int i = 0; i < files_n; i++) {
-        objs[i]->file = NULL;
-    }
-
     struct object_file *_objs = *objs;
     for (int i = 0; i < files_n; i++) {
+        _objs[i].file = NULL;
+        _objs[i].filename = files[i];
+    }
+
+    
+    for (int i = 0; i < files_n; i++) {
         err->file = files[i];
-        objs[i]->file = fopen(files[i], "rb");
-        if (objs[i]->file == NULL) {
+        _objs[i].file = fopen(files[i], "rb");
+        if (_objs[i].file == NULL) {
+            snprintf(err->msg, ERR_MSG_LEN, "Could not open object file.");
             goto _error;
         }
         try_else(read_int32(_objs[i].file, &_objs[i].symbol_table_len), LINK_OK, goto _error);
@@ -158,7 +161,7 @@ enum linker_result build_symbol_table(struct object_file *objs, int obj_n, struc
             if (offset < obj->exec_len) {
                 offset += global_exec_offset;
             } else {
-                offset = (offset - obj->exec_len + total_exec_len) + global_data_offset;
+                offset = (offset - obj->exec_len) + total_exec_len + global_data_offset;
             }
             if (hashmap_find(table, key) == HMAP_OK) {
                 snprintf(err->msg, ERR_MSG_LEN, "Found label '%.20s' redefinition.", key);
@@ -183,9 +186,6 @@ _error:
 }
 
 
-void f(void){
-
-}
 
 
 enum linker_result write_exec_sections(struct object_file *objs, int obj_n, struct hashmap *table, FILE *fout, struct compiler_error *err) {
@@ -197,7 +197,8 @@ enum linker_result write_exec_sections(struct object_file *objs, int obj_n, stru
         struct object_file *obj = &objs[i];
         err->file = obj->filename;
         
-        while (read_instr(obj->file, &instr) == LINK_OK) {
+        for (uint32_t j = 0; j < obj->exec_len; j+=4) {
+            try_else(read_instr(obj->file, &instr), LINK_OK, goto _error)
             if (*instr.label == '\0') {
                 try_else(fwrite(&instr.bytes, sizeof(uint8_t), 4, fout), 4, goto _error);
                 
@@ -226,17 +227,21 @@ enum linker_result write_exec_sections(struct object_file *objs, int obj_n, stru
         
     }
 
+    return LINK_OK;
+
 _error: 
     free(instr.label);
     return LINK_ERR;
 }
 
 enum linker_result write_data_sections(struct object_file *objs, int obj_n, FILE *fout, struct compiler_error *err) {
+    
     for (int i = 0; i < obj_n; i++) {
         struct object_file *obj = &objs[i];
         err->file = obj->filename;
         uint8_t byte;
         while (fread(&byte, sizeof(uint8_t), 1, obj->file) == 1) {
+            
             try_else(fwrite(&byte, sizeof(uint8_t), 1, fout), 1, return LINK_ERR);
         }
     }
@@ -254,11 +259,11 @@ enum linker_result link_object_files(const char **files, int files_n, const char
     strcpy(err->msg, "Unknown error.");
     err->file = NULL;
 
-    struct object_file *objs;
     bool _table = false;
     bool _objs = false;
     bool _fout = false;
 
+    struct object_file *objs;
     try_else(open_obj_files(files, files_n, &objs, err), LINK_OK, goto _error);
     _objs = true;
 
@@ -268,6 +273,10 @@ enum linker_result link_object_files(const char **files, int files_n, const char
     try_else(build_symbol_table(objs, files_n, &symbol_table, err), LINK_OK, goto _error);
     _table = true;
 
+
+    if (out == NULL) {
+        out = "a.bin";
+    }
     FILE *fout = fopen(out, "wb");
     if (fout == NULL) {
         goto _error;

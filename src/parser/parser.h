@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 #include "libs/vector/vector.h"
-enum parser_result parse(struct token *in, uint32_t n, struct ast_file *out, struct compiler_error *err);
+enum parser_result parse(struct token *in, uint32_t n, const char *filename, struct ast_file *out, struct compiler_error *err);
 
 
 

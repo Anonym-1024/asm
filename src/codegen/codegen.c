@@ -271,10 +271,17 @@ enum codegen_result generate_symbol_table(struct hashmap *table, FILE *out) {
     return CODEGEN_OK;
 }
 
-enum codegen_result generate_object_file(struct ast_file *file, struct sema_output *sema, FILE *out, struct compiler_error *err) {
+enum codegen_result generate_object_file(struct ast_file *file, struct sema_output *sema, const char *_out, struct compiler_error *err) {
     err->col = 0;
     err->line = 0;
     strcpy(err->msg, "Unknown error.");
+    err->file = file->filename;
+
+
+    FILE *out = fopen(_out, "wb");
+    if (out == NULL) {
+        goto _error;
+    }
 
 
     uint32_t symbol_n = hashmap_get_item_count(&sema->symbol_table);
@@ -292,12 +299,12 @@ enum codegen_result generate_object_file(struct ast_file *file, struct sema_outp
     try_else(generate_data_sections(file, out), CODEGEN_OK, goto _error);
 
 
-
+    fclose(out);
 
     return CODEGEN_OK;
 
 _error:
-    
+    fclose(out);
     err->kind = CERROR_CODEGEN;
     
     return CODEGEN_ERR;

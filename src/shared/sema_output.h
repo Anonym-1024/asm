@@ -14,6 +14,7 @@ struct sema_output {
     uint32_t data_len;
 };
 
+void sema_output_deinit(struct sema_output *s);
 
 
 #endif
