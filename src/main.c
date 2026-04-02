@@ -25,7 +25,7 @@ int main(int argc, const char **argv) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-o") == 0) {
             if (i+1 >= argc) {
-                printf("\033[31mExpected output file name after '-o'.");
+                printf("\033[31mExpected output file name after '-o'.\n\033[0m");
                 return -1;
             }
 
@@ -34,7 +34,7 @@ int main(int argc, const char **argv) {
 
         if (strcmp(argv[i], "-c") == 0) {
             if (i+1 >= argc) {
-                printf("\033[31mExpected input file name after '-c'.");
+                printf("\033[31mExpected input file name after '-c'.\n\033[0m");
                 return -1;
             }
 
@@ -48,7 +48,7 @@ int main(int argc, const char **argv) {
             }
 
             if (l_input_len == 0) {
-                printf("\033[31mExpected input files after '-l'.");
+                printf("\033[31mExpected input files after '-l'.\n\033[0m");
                 return -1;
             }
             l_input = &argv[i+1];
@@ -58,7 +58,7 @@ int main(int argc, const char **argv) {
     }
 
     if (c_input != NULL && l_input != NULL) {
-        printf("\033[31mConnot use both '-l' and '-c' at the same time.");
+        printf("\033[31mConnot use both '-l' and '-c' at the same time.\n\033[0m");
         return -1;
     }
     
@@ -80,7 +80,7 @@ int main(int argc, const char **argv) {
         }
         
     } else {
-        printf("\033[31mUse '-c <file>' or '-l <files>'.");
+        printf("\033[31mUse '-c <file>' or '-l <files>'.\n\033[0m");
         return -1;
     }
 

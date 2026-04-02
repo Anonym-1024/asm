@@ -274,6 +274,15 @@ enum linker_result link_object_files(const char **files, int files_n, const char
     _table = true;
 
 
+    uint32_t start;
+    if (hashmap_get(&symbol_table, ".start", &start) == HMAP_NO_ENTRY) {
+        snprintf(err->msg, ERR_MSG_LEN, "Symbol '.start' has not been defined.");
+        goto _error;
+    }
+    
+
+
+
     if (out == NULL) {
         out = "a.bin";
     }
@@ -282,6 +291,8 @@ enum linker_result link_object_files(const char **files, int files_n, const char
         goto _error;
     }
 
+
+    try_else(fwrite(&(uint8_t[]){0x05, 0xb, start, start>>8}, sizeof(uint8_t), 4, fout), 4, return LINK_ERR);
 
     try_else(write_exec_sections(objs, files_n, &symbol_table, fout, err), LINK_OK, goto _error);
     try_else(write_data_sections(objs, files_n, fout, err), LINK_OK, goto _error);
