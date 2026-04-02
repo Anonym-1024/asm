@@ -79,7 +79,7 @@ static void next(struct lexer_context *ctx) {
 }
 
 
-enum lexer_result add_lexical_token(struct lexer_context *ctx, enum token_kind kind) {
+static enum lexer_result add_lexical_token(struct lexer_context *ctx, enum token_kind kind) {
     
 
     struct token t;
@@ -215,59 +215,6 @@ _error:
    
     return LEX_ERR;
 }
-
-/*
-static enum lexer_result read_macro(struct lexer_context *ctx) {
-    ctx->start_col = ctx->col;
-
-    
-    
-    try_else(vec_push(&ctx->buffer, &ctx->c), VEC_OK, goto _error);
-    next(ctx);
-
-    
-    while (ctx->c != EOF && is_word_char(ctx->c)) {
-        try_else(vec_push(&ctx->buffer, &ctx->c), VEC_OK, goto _error);
-        next(ctx);
-    }
-    char term = 0;
-    try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
-
-    
-    enum macro_token m;
-    if (hashmap_get(&ctx->macro_map, ctx->buffer.ptr, &m) != HMAP_OK) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "'%s' is not a valid macro.", (char*)ctx->buffer.ptr);
-        goto _error;
-    }
-    
-    
-    struct token t = {
-        .kind = TOKEN_MACRO,
-        //.line = ctx->line,
-        .col = ctx->start_col,
-        .macro = m
-    };
-
-    try_else(vec_push(&ctx->out, &t), VEC_OK, goto _error);
-    vec_empty(&ctx->buffer);
-
-    return LEX_OK;
-
-_error:
-    
-    return LEX_ERR;
-}
-
-
-
-*/
-
-
-
-
-
-
-
 
 
 

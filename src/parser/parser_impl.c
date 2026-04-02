@@ -50,7 +50,7 @@ static void next(struct parser_context *ctx) {
     
 }
 
-static enum parser_result copy_terminal(struct parser_context *ctx, struct ast_terminal *term) {
+enum parser_result copy_terminal(struct parser_context *ctx, struct ast_terminal *term) {
     struct token *t = &ctx->in[ctx->index];
 
     term->token = t;
@@ -708,11 +708,7 @@ _error:
     if(_instr_stmt) {
         ast_instruction_stmt_deinit(&stmt->instruction_stmt);
     }
-    /*
-    if (_macro_stmt) {
-        ast_macro_stmt_deinit(&stmt->macro_stmt);
-    }
-    */
+   
 
     
 
@@ -1058,41 +1054,7 @@ _error:
     
     return PARSER_ERR;
 }
-/*
-enum parser_result parse_macro_stmt(struct parser_context *ctx, struct ast_macro_stmt *stmt) {
-     
-    
-    
 
-    if (!is_matching_kind(ctx, 0, TOKEN_MACRO)) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected instruction");
-        goto _error;
-    }
-    try_else(copy_terminal(ctx, &stmt->instr), PARSER_OK, goto _error);
-    
-    next(ctx);
-
-    if (is_matching_punctuation(ctx, 0, PUNCT_LPAR)) {
-        try_else(parse_condition_code(ctx, &stmt->condition_code), PARSER_OK, goto _error);
-        
-        
-    } else {
-        stmt->condition_code.token = NULL;
-    }
-
-    try_else(parse_args(ctx, &stmt->args, &stmt->args_c), PARSER_OK, goto _error);
-    
-
-    
-
-    return PARSER_OK;
-
-_error:
-    
-    return PARSER_ERR;
-}
-
-*/
 
 enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct ast_loc_label_stmt *stmt) {
     

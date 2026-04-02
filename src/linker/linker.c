@@ -29,7 +29,7 @@ struct compiled_instruction {
 };
 
 
-enum linker_result read_str(FILE *f, char **out) {
+static enum linker_result read_str(FILE *f, char **out) {
     struct vector buffer;
     try_else(vec_init(&buffer, 10, sizeof(char)), VEC_OK, return LINK_ERR);
     
@@ -47,7 +47,7 @@ _error:
     return LINK_ERR;
 }
 
-enum linker_result read_int32(FILE *f, uint32_t *n) {
+static enum linker_result read_int32(FILE *f, uint32_t *n) {
     uint8_t bytes[4];
 
     
@@ -66,7 +66,7 @@ enum linker_result read_int32(FILE *f, uint32_t *n) {
     return LINK_OK;
 }
 
-enum linker_result read_instr(FILE *f, struct compiled_instruction *instr) {
+static enum linker_result read_instr(FILE *f, struct compiled_instruction *instr) {
     uint8_t bytes[4];
 
     
@@ -95,7 +95,7 @@ static void close_obj_files(struct object_file *objs, int obj_n) {
     }
 }
 
-enum linker_result open_obj_files(const char **files, int files_n, struct object_file **objs, struct compiler_error *err) {
+static enum linker_result open_obj_files(const char **files, int files_n, struct object_file **objs, struct compiler_error *err) {
 
     *objs = malloc(sizeof(struct object_file) * files_n);
     if (*objs == NULL) {
@@ -129,7 +129,7 @@ _error:
 }
 
 
-enum linker_result build_symbol_table(struct object_file *objs, int obj_n, struct hashmap *table, struct compiler_error *err) {
+static enum linker_result build_symbol_table(struct object_file *objs, int obj_n, struct hashmap *table, struct compiler_error *err) {
 
     try_else(hashmap_init(table, 256), HMAP_OK, return LINK_ERR);
 
@@ -188,7 +188,7 @@ _error:
 
 
 
-enum linker_result write_exec_sections(struct object_file *objs, int obj_n, struct hashmap *table, FILE *fout, struct compiler_error *err) {
+static enum linker_result write_exec_sections(struct object_file *objs, int obj_n, struct hashmap *table, FILE *fout, struct compiler_error *err) {
     struct compiled_instruction instr;
     instr.label = NULL;
 
@@ -234,7 +234,7 @@ _error:
     return LINK_ERR;
 }
 
-enum linker_result write_data_sections(struct object_file *objs, int obj_n, FILE *fout, struct compiler_error *err) {
+static enum linker_result write_data_sections(struct object_file *objs, int obj_n, FILE *fout, struct compiler_error *err) {
     
     for (int i = 0; i < obj_n; i++) {
         struct object_file *obj = &objs[i];
@@ -292,7 +292,7 @@ enum linker_result link_object_files(const char **files, int files_n, const char
     }
 
 
-    try_else(fwrite(&(uint8_t[]){0x05, 0xb, start, start>>8}, sizeof(uint8_t), 4, fout), 4, return LINK_ERR);
+    try_else(fwrite(&(uint8_t[]){0x05, 0xb0, start, start>>8}, sizeof(uint8_t), 4, fout), 4, return LINK_ERR);
 
     try_else(write_exec_sections(objs, files_n, &symbol_table, fout, err), LINK_OK, goto _error);
     try_else(write_data_sections(objs, files_n, fout, err), LINK_OK, goto _error);

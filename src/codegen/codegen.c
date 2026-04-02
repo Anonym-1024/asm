@@ -16,7 +16,7 @@
 
 
 
-enum codegen_result write_int32(FILE *out, uint32_t n) {
+static enum codegen_result write_int32(FILE *out, uint32_t n) {
     uint8_t byte = n & 0xFF; 
     for (int i = 0; i < 4; i++) {
         if (fwrite(&byte, 1, 1, out) != 1) {
@@ -31,7 +31,7 @@ enum codegen_result write_int32(FILE *out, uint32_t n) {
 
 
 
-enum codegen_result generate_byte_stmt(struct ast_byte_stmt *stmt, FILE *out) {
+static enum codegen_result generate_byte_stmt(struct ast_byte_stmt *stmt, FILE *out) {
     if (stmt->init.kind == AST_INIT_NUM) {
         try_else(write_int32(out, stmt->init.number.token->number), CODEGEN_OK, return CODEGEN_ERR);
     } else {
@@ -41,7 +41,7 @@ enum codegen_result generate_byte_stmt(struct ast_byte_stmt *stmt, FILE *out) {
 
 }
 
-enum codegen_result generate_bytes_stmt(struct ast_bytes_stmt *stmt, FILE *out) {
+static enum codegen_result generate_bytes_stmt(struct ast_bytes_stmt *stmt, FILE *out) {
     
     if (stmt->init.kind == AST_INIT_NUM) {
         try_else(write_int32(out, stmt->init.number.token->number), CODEGEN_OK, return CODEGEN_ERR);
@@ -72,7 +72,7 @@ enum codegen_result generate_bytes_stmt(struct ast_bytes_stmt *stmt, FILE *out) 
     return CODEGEN_OK;
 }
 
-enum codegen_result generate_data_stmt(struct ast_data_stmt *stmt, FILE *out) {
+static enum codegen_result generate_data_stmt(struct ast_data_stmt *stmt, FILE *out) {
     if (stmt->kind == AST_DATA_STMT_BYTE_STMT) {
         try_else(generate_byte_stmt(&stmt->byte_stmt, out), CODEGEN_OK, return CODEGEN_ERR);
     } else if (stmt->kind == AST_DATA_STMT_BYTES_STMT) {
@@ -85,7 +85,7 @@ enum codegen_result generate_data_stmt(struct ast_data_stmt *stmt, FILE *out) {
 
 }
 
-enum codegen_result generate_data_stmts(struct ast_data_section *sec, FILE *out) {
+static enum codegen_result generate_data_stmts(struct ast_data_section *sec, FILE *out) {
     uint32_t i;
     for (i = 0; i < sec->stmts_c; i++) {
         try_else(generate_data_stmt(&sec->data_stmts[i], out), CODEGEN_OK, return CODEGEN_ERR);
@@ -95,7 +95,7 @@ enum codegen_result generate_data_stmts(struct ast_data_section *sec, FILE *out)
     return CODEGEN_OK;
 }
 
-enum codegen_result generate_data_sections(struct ast_file *file, FILE *out) {
+static enum codegen_result generate_data_sections(struct ast_file *file, FILE *out) {
     for (uint32_t i = 0; i < file->sec_n; i++) {
         if (file->sections[i].kind == AST_DATA_SECTION) {
             try_else(generate_data_stmts(&file->sections[i].data_section, out), CODEGEN_OK, return CODEGEN_ERR);
@@ -109,7 +109,7 @@ enum codegen_result generate_data_sections(struct ast_file *file, FILE *out) {
 
 
 
-enum codegen_result resolve_loc_label(struct ast_loc_label *label, uint32_t pos, struct ast_exec_section *sec, uint32_t *offset) {
+static enum codegen_result resolve_loc_label(struct ast_loc_label *label, uint32_t pos, struct ast_exec_section *sec, uint32_t *offset) {
     if (label->dir.token->dir == DIR_F) {
         for (uint32_t i = pos; i < sec->stmts_c; i++) {
             if (sec->exec_stmts[i].kind == AST_EXEC_STMT_LOC_LABEL_STMT) {
@@ -155,7 +155,7 @@ static void add_imm16(uint8_t *byte2, uint8_t *byte3, uint16_t imm) {
 
 
 
-enum codegen_result generate_instruction_stmt(struct ast_instruction_stmt *instr, FILE *out, struct compiler_error *err, struct ast_exec_section *sec, uint32_t pos) {
+static enum codegen_result generate_instruction_stmt(struct ast_instruction_stmt *instr, FILE *out, struct compiler_error *err, struct ast_exec_section *sec, uint32_t pos) {
     uint8_t byte0 = 0;
     uint8_t byte1 = 0;
     uint8_t byte2 = 0;
@@ -219,7 +219,7 @@ enum codegen_result generate_instruction_stmt(struct ast_instruction_stmt *instr
 
     return CODEGEN_OK;
 }
-enum codegen_result generate_exec_stmt(struct ast_exec_stmt *stmt, FILE *out, struct compiler_error *err, struct ast_exec_section *sec, uint32_t pos) {
+static enum codegen_result generate_exec_stmt(struct ast_exec_stmt *stmt, FILE *out, struct compiler_error *err, struct ast_exec_section *sec, uint32_t pos) {
     if (stmt->kind == AST_EXEC_STMT_INSTRUCTION_STMT) {
         try_else(generate_instruction_stmt(&stmt->instruction_stmt, out, err, sec, pos), CODEGEN_OK, goto _error);
     }
@@ -232,7 +232,7 @@ _error:
 
 }
 
-enum codegen_result generate_exec_stmts(struct ast_exec_section *sec, FILE *out, struct compiler_error *err) {
+static enum codegen_result generate_exec_stmts(struct ast_exec_section *sec, FILE *out, struct compiler_error *err) {
     uint32_t i;
     for (i = 0; i < sec->stmts_c; i++) {
         try_else(generate_exec_stmt(&sec->exec_stmts[i], out, err, sec, i), CODEGEN_OK, return CODEGEN_ERR);
@@ -242,7 +242,7 @@ enum codegen_result generate_exec_stmts(struct ast_exec_section *sec, FILE *out,
     return CODEGEN_OK;
 }
 
-enum codegen_result generate_exec_sections(struct ast_file *file, FILE *out, struct compiler_error *err) {
+static enum codegen_result generate_exec_sections(struct ast_file *file, FILE *out, struct compiler_error *err) {
     for (uint32_t i = 0; i < file->sec_n; i++) {
         if (file->sections[i].kind == AST_EXEC_SECTION) {
             try_else(generate_exec_stmts(&file->sections[i].exec_section, out, err), CODEGEN_OK, return CODEGEN_ERR);
@@ -252,7 +252,7 @@ enum codegen_result generate_exec_sections(struct ast_file *file, FILE *out, str
 }
 
 
-enum codegen_result generate_symbol_table(struct hashmap *table, FILE *out) {
+static enum codegen_result generate_symbol_table(struct hashmap *table, FILE *out) {
     for (size_t i = 0; i < table->size; i++) {
         struct hashmap_item *item = table->table[i];
         while (item != NULL) {

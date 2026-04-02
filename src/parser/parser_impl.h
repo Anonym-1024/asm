@@ -79,8 +79,6 @@ enum parser_result parse_direction_dir(struct parser_context *ctx, struct ast_te
 
 enum parser_result parse_loc_label_dist(struct parser_context *ctx, struct ast_terminal *dist);
 
-//enum parser_result parse_macro_stmt(struct parser_context *ctx, struct ast_macro_stmt *stmt);
-
 enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct ast_loc_label_stmt *stmt);
 
 
