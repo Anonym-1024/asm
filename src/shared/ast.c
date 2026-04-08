@@ -72,7 +72,7 @@ void ast_data_stmt_deinit(struct ast_data_stmt *node) {
 
 
 void ast_data_section_deinit(struct ast_data_section *node) {
-    for (uint32_t i = 0; i < node->stmts_c; i++) {
+    for (uint32_t i = 0; i < node->stmts_n; i++) {
         ast_data_stmt_deinit(&node->data_stmts[i]);
     }
     free(node->data_stmts);
@@ -86,23 +86,23 @@ void ast_code_stmt_deinit(struct ast_code_stmt *node) {
 
 
     case AST_CODE_STMT_LABEL:
-        
+
     break;
 
     case AST_CODE_STMT_LOC_LABEL:
-       
+
     break;
 
     case AST_CODE_STMT_START:
     break;
     }
-    
+
 }
 
 
 
 void ast_code_section_deinit(struct ast_code_section *node) {
-    for (uint32_t i = 0; i < node->stmts_c; i++) {
+    for (uint32_t i = 0; i < node->stmts_n; i++) {
         ast_code_stmt_deinit(&node->code_stmts[i]);
     }
     free(node->code_stmts);
@@ -111,8 +111,10 @@ void ast_code_section_deinit(struct ast_code_section *node) {
 void ast_section_deinit(struct ast_section *node) {
     if (node->kind == AST_DATA_SECTION) {
         ast_data_section_deinit(&node->data_section);
-    } else {
+    } else if (node->kind == AST_CODE_SECTION) {
         ast_code_section_deinit(&node->code_section);
+    } else if (node->kind == AST_HEAD_SECTION) {
+
     }
 }
 
@@ -132,11 +134,11 @@ void ast_file_deinit(struct ast_file *node) {
 void ast_initializer_deinit(struct ast_initializer *node) {
     switch (node->kind) {
     case AST_INIT_ASCII:
-        
+
     break;
 
     case AST_INIT_NUM:
-       
+
     break;
 
     case AST_INIT_BYTE_INIT:
@@ -157,7 +159,7 @@ void ast_bytes_stmt_deinit(struct ast_bytes_stmt *node) {
     if (node->init.kind != AST_INIT_NONE) {
         ast_initializer_deinit(&node->init);
     }
-    
+
 }
 
 
@@ -165,6 +167,7 @@ void ast_bytes_stmt_deinit(struct ast_bytes_stmt *node) {
 
 
 void ast_instruction_stmt_deinit(struct ast_instruction_stmt *node) {
+
     free(node->args);
 }
 

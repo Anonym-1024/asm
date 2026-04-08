@@ -30,28 +30,29 @@ enum ast_section_kind {
 
 struct ast_data_section {
     struct ast_data_stmt *data_stmts;
-    uint32_t stmts_c;
+    uint32_t stmts_n;
 };
 
 struct ast_code_section {
     struct ast_code_stmt *code_stmts;
-    uint32_t stmts_c;
+    uint32_t stmts_n;
 };
 
 enum ast_head_stmt_kind {
-    HEAD_STMT_GLOB,
-    HEAD_STNT_EXTERN
+    AST_HEAD_STMT_GLOB,
+    AST_HEAD_STMT_EXTERN
 };
 
 struct ast_glob_stmt {
-    struct ast_terminal label;
+    struct ast_terminal ident;
 };
 
 struct ast_extern_stmt {
-    struct ast_terminal label;
+    struct ast_terminal ident;
 };
 
 struct ast_head_stmt {
+    uint32_t line;
     enum ast_head_stmt_kind kind;
     union {
         struct ast_glob_stmt glob_stmt;
@@ -61,7 +62,7 @@ struct ast_head_stmt {
 
 struct ast_head_section {
     struct ast_head_stmt *stmts;
-    uint32_t stmt_c;
+    uint32_t stmt_n;
 };
 
 
@@ -85,7 +86,7 @@ enum ast_initializer_kind {
 
 struct ast_byte_init {
     struct ast_terminal *numbers;
-    uint32_t num_c;
+    uint32_t num_n;
 };
 
 struct ast_initializer {
@@ -103,15 +104,15 @@ struct ast_byte_stmt {
 };
 
 struct ast_bytes_stmt {
-    
+
     struct ast_initializer init;
     struct ast_terminal len;
 };
 
 struct ast_label_stmt {
-    
+
     struct ast_terminal ident;
-    
+
 };
 
 enum ast_data_stmt_kind {
@@ -137,7 +138,7 @@ struct ast_instruction_stmt {
     struct ast_terminal instr;
     struct ast_terminal condition_code;
     struct ast_arg *args;
-    uint32_t args_c;
+    uint32_t args_n;
 };
 
 
@@ -174,9 +175,8 @@ struct ast_code_stmt {
 
 struct ast_loc_label {
     struct ast_terminal dir;
-   
     struct ast_terminal ident;
-    
+
 };
 
 
@@ -191,10 +191,10 @@ enum ast_arg_kind {
 };
 
 struct ast_label {
-    
+
     struct ast_terminal ident;
-        
-    
+
+
 };
 
 struct ast_arg {
@@ -245,25 +245,8 @@ void _ast_head_section_deinit(void *node);
 
 
 
-/*
-void null_ast_terminal(struct ast_terminal *node);
-void null_ast_file(struct ast_file *node);
-void null_ast_data_section(struct ast_data_section *node);
-void null_ast_code_section(struct ast_code_section *node);
-void null_ast_section(struct ast_section *node);
-void null_ast_byte_initializer(struct ast_byte_initializer *node);
-void null_ast_initializer(struct ast_initializer *node);
-void null_ast_byte_stmt(struct ast_byte_stmt *node);
-void null_ast_bytes_stmt(struct ast_bytes_stmt *node);
-void null_ast_label_stmt(struct ast_label_stmt *node);
-void null_ast_data_stmt(struct ast_data_stmt *node);
-void null_ast_instruction_stmt(struct ast_instruction_stmt *node);
-void null_ast_loc_label_stmt(struct ast_loc_label_stmt *node);
-void null_ast_code_stmt(struct ast_code_stmt *node);
-void null_ast_loc_label(struct ast_loc_label *node);
-void null_ast_arg(struct ast_arg *node);
 
-*/
+
 
 
 void print_ast_file(struct ast_file *file);

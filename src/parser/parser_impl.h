@@ -27,7 +27,7 @@ enum parser_result {
 
 enum parser_result parse_file(struct parser_context *ctx, struct ast_file *file);
 
-enum parser_result parse_sections(struct parser_context *ctx, struct ast_section **sections, uint32_t *sec_c);
+enum parser_result parse_sections(struct parser_context *ctx, struct ast_section **sections, uint32_t *sec_n);
 
 enum parser_result parse_section(struct parser_context *ctx, struct ast_section *section);
 
@@ -35,7 +35,7 @@ enum parser_result parse_data_section(struct parser_context *ctx, struct ast_dat
 
 enum parser_result parse_data_dir(struct parser_context *ctx);
 
-enum parser_result parse_data_stmts(struct parser_context *ctx, struct ast_data_stmt **stmts, uint32_t *stmt_c);
+enum parser_result parse_data_stmts(struct parser_context *ctx, struct ast_data_stmt **stmts, uint32_t *stmt_n);
 
 enum parser_result parse_data_stmt(struct parser_context *ctx, struct ast_data_stmt *stmt);
 
@@ -49,13 +49,13 @@ enum parser_result parse_initializer(struct parser_context *ctx, struct ast_init
 
 enum parser_result parse_byte_initializer(struct parser_context *ctx, struct ast_byte_init *byte_init);
 
-enum parser_result parse_numbers(struct parser_context *ctx, struct ast_terminal **numbers, uint32_t *byte_c);
+enum parser_result parse_numbers(struct parser_context *ctx, struct ast_terminal **numbers, uint32_t *byte_n);
 
 enum parser_result parse_code_section(struct parser_context *ctx, struct ast_code_section *section);
 
 enum parser_result parse_code_dir(struct parser_context *ctx);
 
-enum parser_result parse_code_stmts(struct parser_context *ctx, struct ast_code_stmt **stmts, uint32_t *stmt_c);
+enum parser_result parse_code_stmts(struct parser_context *ctx, struct ast_code_stmt **stmts, uint32_t *stmt_n);
 
 enum parser_result parse_code_stmt(struct parser_context *ctx, struct ast_code_stmt *stmt);
 
@@ -65,7 +65,7 @@ enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct ast
 
 enum parser_result parse_condition_code(struct parser_context *ctx, struct ast_terminal *cond);
 
-enum parser_result parse_args(struct parser_context *ctx, struct ast_arg **args, uint32_t *arg_c);
+enum parser_result parse_args(struct parser_context *ctx, struct ast_arg **args, uint32_t *arg_n);
 
 enum parser_result parse_arg(struct parser_context *ctx, struct ast_arg *arg);
 
@@ -85,7 +85,7 @@ enum parser_result parse_head_section(struct parser_context *ctx, struct ast_hea
 
 enum parser_result parse_head_dir(struct parser_context *ctx);
 
-enum parser_result parse_head_stmts(struct parser_context *ctx, struct ast_head_stmt **stmts, uint32_t stmt_c);
+enum parser_result parse_head_stmts(struct parser_context *ctx, struct ast_head_stmt **stmts, uint32_t *stmt_n);
 
 enum parser_result parse_head_stmt(struct parser_context *ctx, struct ast_head_stmt *stmt);
 

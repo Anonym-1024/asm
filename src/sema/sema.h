@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include "shared/ast.h"
 #include "error/compiler_error.h"
-#include "libs/hashmap/hashmap.h"
 #include "shared/sema_output.h"
 
 

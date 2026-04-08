@@ -11,7 +11,7 @@ struct lexer_context {
     FILE *in; //! Reference
     int c;
     struct vector out; //! Owned
-    
+
     uint32_t line;
     uint16_t col;
     uint16_t start_col;
@@ -31,7 +31,7 @@ struct lexer_context {
     struct hashmap data_unit_map;
     struct hashmap punct_map;
     struct hashmap cond_code_map;
-    
+
 };
 
 
@@ -80,7 +80,7 @@ static void next(struct lexer_context *ctx) {
 
 
 static enum lexer_result add_lexical_token(struct lexer_context *ctx, enum token_kind kind) {
-    
+
 
     struct token t;
     t.kind = kind;
@@ -88,9 +88,9 @@ static enum lexer_result add_lexical_token(struct lexer_context *ctx, enum token
     t.col = ctx->start_col;
 
     t.lexeme = ctx->buffer.ptr;
-    
 
-    
+
+
     try_else(vec_push(&ctx->out, &t), VEC_OK, return LEX_ERR);
     ctx->_buffer = false;
     try_else(vec_init(&ctx->buffer, 6, sizeof(char)), VEC_OK, return LEX_ERR);
@@ -106,7 +106,7 @@ static enum lexer_result add_lexical_token(struct lexer_context *ctx, enum token
 
 
 static enum lexer_result read_comment(struct lexer_context *ctx) {
-    
+
     while (ctx->c != EOF && ctx->c != '\n') {
         next(ctx);
     }
@@ -117,7 +117,7 @@ static enum lexer_result read_comment(struct lexer_context *ctx) {
 static enum lexer_result read_new_line(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
 
-    
+
     struct token t = {
         .kind = TOKEN_PUNCT,
         //.line = ctx->line,
@@ -126,11 +126,11 @@ static enum lexer_result read_new_line(struct lexer_context *ctx) {
     };
 
     try_else(vec_push(&ctx->out, &t), VEC_OK, return LEX_ERR);
-    
+
     next(ctx);
     ctx->col = 1;
     ctx->line += 1;
-    
+
     return LEX_OK;
 
 
@@ -152,7 +152,7 @@ static enum lexer_result read_punctuation(struct lexer_context *ctx, char c) {
     char term = 0;
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, return LEX_ERR);
 
-    
+
     enum punctuation_token p;
     hashmap_get(&ctx->punct_map, ctx->buffer.ptr, &p);
 
@@ -176,12 +176,12 @@ static enum lexer_result read_punctuation(struct lexer_context *ctx, char c) {
 static enum lexer_result read_directive(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
 
-    
-    
+
+
     try_else(vec_push(&ctx->buffer, &ctx->c), VEC_OK, goto _error);
     next(ctx);
 
-    
+
     while (ctx->c != EOF && is_word_char(ctx->c)) {
         try_else(vec_push(&ctx->buffer, &ctx->c), VEC_OK, goto _error);
         next(ctx);
@@ -191,13 +191,13 @@ static enum lexer_result read_directive(struct lexer_context *ctx) {
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
 
 
-    
+
     enum directive_token d;
     if (hashmap_get(&ctx->dir_map, ctx->buffer.ptr, &d) != HMAP_OK) {
         snprintf(ctx->error_msg, ERR_MSG_LEN, "'%.20s' is not a valid directive.", (char*)ctx->buffer.ptr);
         goto _error;
     }
-     
+
 
     struct token t = {
         .kind = TOKEN_DIR,
@@ -212,7 +212,7 @@ static enum lexer_result read_directive(struct lexer_context *ctx) {
     return LEX_OK;
 
 _error:
-   
+
     return LEX_ERR;
 }
 
@@ -221,7 +221,7 @@ _error:
 
 static enum lexer_result read_word(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
-    
+
     while (ctx->c != EOF && is_word_char(ctx->c)) {
         try_else(vec_push(&ctx->buffer, &ctx->c), VEC_OK, goto _error);
         next(ctx);
@@ -229,51 +229,51 @@ static enum lexer_result read_word(struct lexer_context *ctx) {
     char term = 0;
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
 
-    
+
 
     struct token t = {
         //.line = ctx->line,
         .col = ctx->start_col
     };
-    
+
     unsigned int x;
-    
+
     if (hashmap_get(&ctx->instr_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_INSTR;
-        
+
         t.instr = x;
     } else if (hashmap_get(&ctx->reg_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_REG;
-        
+
         t.reg = x;
     } else if (hashmap_get(&ctx->sys_reg_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_SYS_REG;
-        
+
         t.sys_reg = x;
     } else if (hashmap_get(&ctx->addr_reg_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_ADDR_REG;
-        
+
         t.addr_reg = x;
     } else if (hashmap_get(&ctx->port_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_PORT;
-        
+
         t.port = x;
     } else if (hashmap_get(&ctx->data_unit_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_DATA_UNIT;
-        
+
         t.data_unit = x;
     } else if (hashmap_get(&ctx->cond_code_map, ctx->buffer.ptr, &x) == HMAP_OK) {
         t.kind = TOKEN_COND_CODE;
-        
+
         t.cond_code = x;
     } else {
         t.kind = TOKEN_IDENT;
         try_else(add_lexical_token(ctx, TOKEN_IDENT), LEX_OK, goto _error);
         return LEX_OK;
     }
-    
 
-   
+
+
 
     try_else(vec_push(&ctx->out, &t), VEC_OK, goto _error);
     vec_empty(&ctx->buffer);
@@ -281,7 +281,7 @@ static enum lexer_result read_word(struct lexer_context *ctx) {
     return LEX_OK;
 
 _error:
-    
+
     return LEX_ERR;
 }
 
@@ -290,7 +290,7 @@ static enum lexer_result read_ascii(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
     next(ctx);
 
-    
+
     while(ctx->c != EOF && ctx->c != '"') {
         if (!is_printable_char(ctx->c)) {
             snprintf(ctx->error_msg, ERR_MSG_LEN, "'%c' is not a valid ascii character.", ctx->c);
@@ -309,7 +309,7 @@ static enum lexer_result read_ascii(struct lexer_context *ctx) {
     try_else(vec_push(&ctx->buffer, &term), VEC_OK, return LEX_ERR);
 
     try_else(add_lexical_token(ctx, TOKEN_ASCII), LEX_OK, return LEX_ERR);
-    
+
     return LEX_OK;
 
 
@@ -344,7 +344,7 @@ static enum lexer_result validate_number(struct lexer_context *ctx, const char *
         return LEX_ERR;
     }
 
-    
+
     *n = res;
     vec_empty(&ctx->buffer);
     return LEX_OK;
@@ -353,8 +353,8 @@ static enum lexer_result validate_number(struct lexer_context *ctx, const char *
 
 static enum lexer_result read_number(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
-    
-    
+
+
     try_else(vec_push(&ctx->buffer, &ctx->c), VEC_OK, return LEX_ERR);
     next(ctx);
 
@@ -373,7 +373,7 @@ static enum lexer_result read_number(struct lexer_context *ctx) {
 
     int32_t n;
     try_else(validate_number(ctx, ctx->buffer.ptr, &n), LEX_OK, return LEX_ERR);
-    
+
     struct token t = {
         //.line = ctx->line,
         .col = ctx->start_col,
@@ -478,8 +478,8 @@ static enum lexer_result make_hash_maps(struct lexer_context *ctx) {
     #define X(u, l) try_else(hashmap_add(&ctx->data_unit_map, #l, DATA_##u), HMAP_OK, goto _error);
     #include "resources/data_units.def"
     #undef X
-    
-    
+
+
 
     return LEX_OK;
 
@@ -492,7 +492,6 @@ _error:
     if (_addr_reg_map) hashmap_deinit(&ctx->addr_reg_map);
     if (_sys_reg_map) hashmap_deinit(&ctx->sys_reg_map);
     if (_reg_map) hashmap_deinit(&ctx->reg_map);
-    //if (_macro_map) hashmap_deinit(&ctx->macro_map);
     if (_instr_map) hashmap_deinit(&ctx->instr_map);
     if (_dir_map) hashmap_deinit(&ctx->dir_map);
 
@@ -504,21 +503,21 @@ enum lexer_result tokenise(struct source_file *in, struct token **out, uint32_t 
     error->file = in->filename;
     struct lexer_context ctx = {
         .in = in->file,
-    
+
 
         .line = 1,
         .col = 1,
         .start_col = 1,
 
-        
+
         ._buffer = false
-    }; 
+    };
     strcpy(ctx.error_msg, "Unknown error.");
 
     bool _out = false;
-    
+
     try_else(make_hash_maps(&ctx), LEX_OK, goto _error);
-    
+
 
     try_else(vec_init(&ctx.buffer, 6, sizeof(char)), VEC_OK, goto _error);
     ctx._buffer = true;
@@ -526,45 +525,45 @@ enum lexer_result tokenise(struct source_file *in, struct token **out, uint32_t 
     _out = true;
 
 
-    
+
     next(&ctx);
     while (ctx.c != EOF) {
-        
+
         if (ctx.c == ';') {
             try_else(read_comment(&ctx), LEX_OK, goto _error);
-            
+
         } else if (ctx.c == '\n') {
             try_else(read_new_line(&ctx), LEX_OK, goto _error);
-            
+
         } else if (is_whitespace_char(ctx.c)) {
             try_else(read_whitespace(&ctx), LEX_OK, goto _error);
-            
+
         } else if (is_punctuation_char(ctx.c)) {
             try_else(read_punctuation(&ctx, ctx.c), LEX_OK, goto _error);
-            
+
         } else if (ctx.c == '.') {
             try_else(read_directive(&ctx), LEX_OK, goto _error);
-            
+
         } /*else if (ctx.c == '!') {
             try_else(read_macro(&ctx), LEX_OK, goto _error);
-            
+
         }*/
         else if (ctx.c == '"') {
             try_else(read_ascii(&ctx), LEX_OK, goto _error);
-            
+
         } else if (is_digit_char(ctx.c) || ctx.c == '-') {
             try_else(read_number(&ctx), LEX_OK, goto _error);
-            
+
         } else if (is_word_start_char(ctx.c)) {
             try_else(read_word(&ctx), LEX_OK, goto _error);
-            
+
         } else {
             snprintf(ctx.error_msg, ERR_MSG_LEN, "'%c' is not a valid character", ctx.c);
             goto _error;
         }
     }
 
-    
+
     struct token eof = {
         .kind = TOKEN_EOF,
         //.line = ctx.line,
@@ -599,17 +598,18 @@ enum lexer_result tokenise(struct source_file *in, struct token **out, uint32_t 
     return LEX_OK;
 
 _error:
-    
+
     *out = NULL;
     *out_n = 0;
     if (ctx._buffer) vec_deinit(&ctx.buffer, NULL);
     if (_out) vec_deinit(&ctx.out, &_token_deinit);
 
 
-    
+
     error->line = ctx.line;
     error->col = ctx.start_col;
     error->kind = CERROR_LEXER;
+    error->file = in->filename;
     strcpy(error->msg, ctx.error_msg);
 
     hashmap_deinit(&ctx.punct_map);
@@ -626,7 +626,3 @@ _error:
 
     return LEX_ERR;
 }
-
-
-
-

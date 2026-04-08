@@ -17,7 +17,7 @@ enum compiler_error_kind {
     CERROR_UNKNOWN
 };
 
-#define ERR_MSG_LEN 100
+#define ERR_MSG_LEN 200
 
 struct compiler_error {
     enum compiler_error_kind kind;

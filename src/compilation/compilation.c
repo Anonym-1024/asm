@@ -18,7 +18,7 @@
 
 
 enum compilation_result compile_source_file(const char *in, const char *out, struct compiler_error *err) {
-    
+
     strcpy(err->msg, "Unknown error.");
     err->file = NULL;
     err->line = 0;
@@ -42,10 +42,10 @@ enum compilation_result compile_source_file(const char *in, const char *out, str
     uint32_t tokens_n;
     struct ast_file ast_root;
     struct sema_output sema_out;
-    
-    
 
-    
+
+
+
     try_else(tokenise(&src, &tokens, &tokens_n, err), LEX_OK, goto _error);
     _tokens = true;
 
@@ -55,26 +55,27 @@ enum compilation_result compile_source_file(const char *in, const char *out, str
     try_else(perform_semantic_analysis(&ast_root, &sema_out, err), SEMA_OK, goto _error);
     _sema_output = true;
 
-    
+
     if (out == NULL) {
         out = malloc(sizeof(char) * (strlen(src.filename) + 3));
         sprintf((char*)out, "%s.o", src.filename);
     }
-    
+
     try_else(generate_object_file(&ast_root, &sema_out, out, err), CODEGEN_OK, goto _error);
-    
+
     for (uint32_t i = 0; i < tokens_n; i++) {
         token_deinit(&tokens[i]);
     }
-    
+    free(tokens);
+
     ast_file_deinit(&ast_root);
-    
+
     sema_output_deinit(&sema_out);
-    
 
-    
 
-    
+    fclose(src.file);
+
+
 
     return COMP_OK;
 
@@ -100,4 +101,3 @@ _error:
 
     return COMP_ERR;
 }
-
