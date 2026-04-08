@@ -109,7 +109,7 @@ _error:
 
 static bool follows_section(struct parser_context *ctx) {
     return is_matching_directive(ctx, 0, DIR_DATA)
-            || is_matching_directive(ctx, 0, DIR_EXEC);
+            || is_matching_directive(ctx, 0, DIR_CODE);
 }
 
 enum parser_result parse_sections(struct parser_context *ctx, struct ast_section **sections, uint32_t *sec_c) {
@@ -155,19 +155,19 @@ _error:
 enum parser_result parse_section(struct parser_context *ctx, struct ast_section *section) {
     
     bool _data_section = false;
-    bool _exec_section = false;
+    bool _code_section = false;
 
 
     if (is_matching_directive(ctx, 0, DIR_DATA)) {
         section->kind = AST_DATA_SECTION;
         try_else(parse_data_section(ctx, &section->data_section), PARSER_OK, goto _error);
         _data_section = true;
-    } else if (is_matching_directive(ctx, 0, DIR_EXEC)) {
-        section->kind = AST_EXEC_SECTION;
-        try_else(parse_exec_section(ctx, &section->exec_section), PARSER_OK, goto _error);
-        _exec_section = true;
+    } else if (is_matching_directive(ctx, 0, DIR_CODE)) {
+        section->kind = AST_CODE_SECTION;
+        try_else(parse_code_section(ctx, &section->code_section), PARSER_OK, goto _error);
+        _code_section = true;
     } else {
-        snprintf(ctx->error_msg,  ERR_MSG_LEN, "Expected a section header '.DATA' or '.EXEC'");
+        snprintf(ctx->error_msg,  ERR_MSG_LEN, "Expected a section header '.DATA' or '.CODE'");
         goto _error;
     }
 
@@ -179,8 +179,8 @@ _error:
         ast_data_section_deinit(&section->data_section);
     }
 
-    if (_exec_section) {
-        ast_exec_section_deinit(&section->exec_section);
+    if (_code_section) {
+        ast_code_section_deinit(&section->code_section);
     }
     return PARSER_ERR;
 
@@ -243,7 +243,7 @@ bool follows_data_stmt(struct parser_context *ctx) {
             || is_matching_kind(ctx, 0, TOKEN_IDENT);
 }
 
-static bool follows_exec_stmt(struct parser_context *ctx) {
+static bool follows_code_stmt(struct parser_context *ctx) {
     return is_matching_kind(ctx, 0, TOKEN_INSTR)
             //|| is_matching_kind(ctx, 0, TOKEN_MACRO)
             || is_matching_kind(ctx, 0, TOKEN_IDENT)
@@ -270,7 +270,7 @@ enum parser_result parse_data_stmts(struct parser_context *ctx, struct ast_data_
         _stmt = false;
     }
     // Special case error
-    if (follows_exec_stmt(ctx)) {
+    if (follows_code_stmt(ctx)) {
         snprintf(ctx->error_msg,  ERR_MSG_LEN, "Executable statement cannot occur in '.DATA' section.");
         goto _error;
     }
@@ -300,15 +300,15 @@ enum parser_result parse_data_stmt(struct parser_context *ctx, struct ast_data_s
     //bool _label_stmt = false;
 
     if (is_matching_data_unit(ctx, 0, DATA_BYTE)) {
-        stmt->kind = AST_DATA_STMT_BYTE_STMT;
+        stmt->kind = AST_DATA_STMT_BYTE;
         try_else(parse_byte_stmt(ctx, &stmt->byte_stmt), PARSER_OK, goto _error);
         _byte_stmt = true;
     } else if (is_matching_data_unit(ctx, 0, DATA_BYTES)) {
-        stmt->kind = AST_DATA_STMT_BYTES_STMT;
+        stmt->kind = AST_DATA_STMT_BYTES;
         try_else(parse_bytes_stmt(ctx, &stmt->bytes_stmt), PARSER_OK, goto _error);
         _bytes_stmt = true;
     } else if (is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        stmt->kind = AST_DATA_STMT_LABEL_STMT;
+        stmt->kind = AST_DATA_STMT_LABEL;
         try_else(parse_label_stmt(ctx, &stmt->label_stmt), PARSER_OK, goto _error);
         //_label_stmt = true;
     } else {
@@ -574,12 +574,12 @@ _error:
     return PARSER_ERR;
 }
 
-enum parser_result parse_exec_section(struct parser_context *ctx, struct ast_exec_section *section) {
+enum parser_result parse_code_section(struct parser_context *ctx, struct ast_code_section *section) {
     bool _stmts = false;
 
-    try_else(parse_exec_dir(ctx), PARSER_OK, goto _error);
+    try_else(parse_code_dir(ctx), PARSER_OK, goto _error);
 
-    try_else(parse_exec_stmts(ctx, &section->exec_stmts, &section->stmts_c), PARSER_OK, goto _error);
+    try_else(parse_code_stmts(ctx, &section->code_stmts, &section->stmts_c), PARSER_OK, goto _error);
     _stmts = true;
 
     return PARSER_OK;
@@ -588,17 +588,17 @@ _error:
 
     if (_stmts) {
         for (uint32_t i = 0; i < section->stmts_c; i++) {
-            ast_exec_stmt_deinit(&section->exec_stmts[i]);
+            ast_code_stmt_deinit(&section->code_stmts[i]);
         }
-        free(section->exec_stmts);
+        free(section->code_stmts);
     }
 
     return PARSER_ERR;
 }
 
-enum parser_result parse_exec_dir(struct parser_context *ctx) {
-    if (!is_matching_directive(ctx, 0, DIR_EXEC)) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected '.EXEC'");
+enum parser_result parse_code_dir(struct parser_context *ctx) {
+    if (!is_matching_directive(ctx, 0, DIR_CODE)) {
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected '.CODE'");
         goto _error;
     }
     next(ctx);
@@ -624,25 +624,25 @@ _error:
 
 
 
-enum parser_result parse_exec_stmts(struct parser_context *ctx, struct ast_exec_stmt **stmts, uint32_t *stmt_c) {
+enum parser_result parse_code_stmts(struct parser_context *ctx, struct ast_code_stmt **stmts, uint32_t *stmt_c) {
     bool _stmts = false;
     bool _stmt = false;
 
     struct vector stmts_v;
-    try_else(vec_init(&stmts_v, 5, sizeof(struct ast_exec_stmt)), VEC_OK, goto _error);
+    try_else(vec_init(&stmts_v, 5, sizeof(struct ast_code_stmt)), VEC_OK, goto _error);
     _stmts = true;
 
-    struct ast_exec_stmt stmt;
+    struct ast_code_stmt stmt;
 
-    while (follows_exec_stmt(ctx)) {
-        try_else(parse_exec_stmt(ctx, &stmt), PARSER_OK, goto _error);
+    while (follows_code_stmt(ctx)) {
+        try_else(parse_code_stmt(ctx, &stmt), PARSER_OK, goto _error);
         _stmt = true;
         try_else(vec_push(&stmts_v, &stmt), VEC_OK, goto _error);
         _stmt = false;
     }
 
     if (follows_data_stmt(ctx)) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "Data statement cannot occur in '.EXEC' section.");
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Data statement cannot occur in '.CODE' section.");
         goto _error;
     }
 
@@ -653,40 +653,40 @@ enum parser_result parse_exec_stmts(struct parser_context *ctx, struct ast_exec_
 
 _error:
     if (_stmts) {
-        vec_deinit(&stmts_v, &_ast_exec_stmt_deinit);
+        vec_deinit(&stmts_v, &_ast_code_stmt_deinit);
     }
 
     if (_stmt) {
-        ast_exec_stmt_deinit(&stmt);
+        ast_code_stmt_deinit(&stmt);
     }
 
     return PARSER_ERR;
 }
 
-enum parser_result parse_exec_stmt(struct parser_context *ctx, struct ast_exec_stmt *stmt) {
+enum parser_result parse_code_stmt(struct parser_context *ctx, struct ast_code_stmt *stmt) {
     bool _instr_stmt = false;
     //bool _macro_stmt = false;
     
 
     if (is_matching_kind(ctx, 0, TOKEN_INSTR)) {
-        stmt->kind = AST_EXEC_STMT_INSTRUCTION_STMT;
+        stmt->kind = AST_CODE_STMT_INSTRUCTION;
         try_else(parse_instruction_stmt(ctx, &stmt->instruction_stmt), PARSER_OK, goto _error);
         _instr_stmt = true;
     } /*else if (is_matching_kind(ctx, 0, TOKEN_MACRO)) {
-        stmt->kind = AST_EXEC_STMT_MACRO_STMT;
+        stmt->kind = AST_CODE_STMT_MACRO;
         try_else(parse_macro_stmt(ctx, &stmt->macro_stmt), PARSER_OK, goto _error);
         _macro_stmt = true;
     } */
     else if (is_matching_kind(ctx, 0, TOKEN_IDENT)) {
-        stmt->kind = AST_EXEC_STMT_LABEL_STMT;
+        stmt->kind = AST_CODE_STMT_LABEL;
         try_else(parse_label_stmt(ctx, &stmt->label_stmt), PARSER_OK, goto _error);
         
     } else if (is_matching_directive(ctx, 0, DIR_L)) {
-        stmt->kind = AST_EXEC_STMT_LOC_LABEL_STMT;
+        stmt->kind = AST_CODE_STMT_LOC_LABEL;
         try_else(parse_loc_label_stmt(ctx, &stmt->loc_label_stmt), PARSER_OK, goto _error);
         
     } else if (is_matching_directive(ctx, 0, DIR_START)) {
-        stmt->kind = AST_EXEC_STMT_START_STMT;
+        stmt->kind = AST_CODE_STMT_START;
         try_else(parse_start_stmt(ctx), PARSER_OK, goto _error);
     } else {
         snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected an instruction, label or a local label statement");

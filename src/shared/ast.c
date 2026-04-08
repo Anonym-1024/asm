@@ -13,8 +13,8 @@ void _ast_data_section_deinit(void *node) {
     ast_data_section_deinit((struct ast_data_section *)node);
 }
 
-void _ast_exec_section_deinit(void *node) {
-    ast_exec_section_deinit((struct ast_exec_section *)node);
+void _ast_code_section_deinit(void *node) {
+    ast_code_section_deinit((struct ast_code_section *)node);
 }
 
 void _ast_section_deinit(void *node) {
@@ -43,30 +43,29 @@ void _ast_instruction_stmt_deinit(void *node) {
     ast_instruction_stmt_deinit((struct ast_instruction_stmt *)node);
 }
 
-void _ast_macro_stmt_deinit(void *node) {
-    ast_macro_stmt_deinit((struct ast_macro_stmt *)node);
+
+
+void _ast_code_stmt_deinit(void *node) {
+    ast_code_stmt_deinit((struct ast_code_stmt *)node);
 }
 
-
-void _ast_exec_stmt_deinit(void *node) {
-    ast_exec_stmt_deinit((struct ast_exec_stmt *)node);
+void _ast_head_section_deinit(void *node) {
+    ast_head_section_deinit((struct ast_head_section*)node);
 }
-
-
 
 
 
 void ast_data_stmt_deinit(struct ast_data_stmt *node) {
     switch (node->kind) {
-    case AST_DATA_STMT_BYTE_STMT:
+    case AST_DATA_STMT_BYTE:
         ast_byte_stmt_deinit(&node->byte_stmt);
     break;
 
-    case AST_DATA_STMT_BYTES_STMT:
+    case AST_DATA_STMT_BYTES:
         ast_bytes_stmt_deinit(&node->bytes_stmt);
     break;
 
-    case AST_DATA_STMT_LABEL_STMT:
+    case AST_DATA_STMT_LABEL:
     break;
     }
 }
@@ -79,25 +78,22 @@ void ast_data_section_deinit(struct ast_data_section *node) {
     free(node->data_stmts);
 }
 
-void ast_exec_stmt_deinit(struct ast_exec_stmt *node) {
+void ast_code_stmt_deinit(struct ast_code_stmt *node) {
     switch (node->kind) {
-    case AST_EXEC_STMT_INSTRUCTION_STMT:
+    case AST_CODE_STMT_INSTRUCTION:
         ast_instruction_stmt_deinit(&node->instruction_stmt);
     break;
 
-    case AST_EXEC_STMT_MACRO_STMT:
-        ast_macro_stmt_deinit(&node->macro_stmt);
-    break;
 
-    case AST_EXEC_STMT_LABEL_STMT:
+    case AST_CODE_STMT_LABEL:
         
     break;
 
-    case AST_EXEC_STMT_LOC_LABEL_STMT:
+    case AST_CODE_STMT_LOC_LABEL:
        
     break;
 
-    case AST_EXEC_STMT_START_STMT:
+    case AST_CODE_STMT_START:
     break;
     }
     
@@ -105,18 +101,18 @@ void ast_exec_stmt_deinit(struct ast_exec_stmt *node) {
 
 
 
-void ast_exec_section_deinit(struct ast_exec_section *node) {
+void ast_code_section_deinit(struct ast_code_section *node) {
     for (uint32_t i = 0; i < node->stmts_c; i++) {
-        ast_exec_stmt_deinit(&node->exec_stmts[i]);
+        ast_code_stmt_deinit(&node->code_stmts[i]);
     }
-    free(node->exec_stmts);
+    free(node->code_stmts);
 }
 
 void ast_section_deinit(struct ast_section *node) {
     if (node->kind == AST_DATA_SECTION) {
         ast_data_section_deinit(&node->data_section);
     } else {
-        ast_exec_section_deinit(&node->exec_section);
+        ast_code_section_deinit(&node->code_section);
     }
 }
 
@@ -172,101 +168,9 @@ void ast_instruction_stmt_deinit(struct ast_instruction_stmt *node) {
     free(node->args);
 }
 
-void ast_macro_stmt_deinit(struct ast_macro_stmt *node) {
-        
-    free(node->args);
+
+
+
+void ast_head_section_deinit(struct ast_head_section *node) {
+    free(node->stmts);
 }
-
-
-
-
-/*
-
-void null_ast_terminal(struct ast_terminal *node){
-    node->lexeme = NULL;
-}
-
-
-void null_ast_file(struct ast_file *node){
-    node->sections = null_vector();
-}
-
-
-void null_ast_data_section(struct ast_data_section *node){
-    node->data_stmts = null_vector();
-}
-
-
-void null_ast_exec_section(struct ast_exec_section *node){
-    node->exec_stmts = null_vector();
-}
-
-
-void null_ast_section(struct ast_section *node){
-    null_ast_data_section(&node->data_section);
-    null_ast_exec_section(&node->exec_section);
-}
-
-
-void null_ast_byte_initializer(struct ast_byte_initializer *node){
-    node->numbers = null_vector();
-}
-
-
-void null_ast_initializer(struct ast_initializer *node){
-    null_ast_terminal(&node->ascii);
-    null_ast_terminal(&node->number);
-    null_ast_byte_initializer(&node->byte_init);
-}
-
-
-void null_ast_byte_stmt(struct ast_byte_stmt *node){
-    null_ast_initializer(&node->init);
-}
-
-
-void null_ast_bytes_stmt(struct ast_bytes_stmt *node){
-    null_ast_initializer(&node->init);
-}
-
-
-void null_ast_label_stmt(struct ast_label_stmt *node){
-    null_ast_terminal(&node->label);
-}
-
-
-void null_ast_data_stmt(struct ast_data_stmt *node){
-    byte
-}
-
-
-void null_ast_instruction_stmt(struct ast_instruction_stmt *node){
-
-}
-
-
-void null_ast_macro_stmt(struct ast_macro_stmt *node){
-
-}
-
-
-void null_ast_loc_label_stmt(struct ast_loc_label_stmt *node){
-
-}
-
-
-void null_ast_exec_stmt(struct ast_exec_stmt *node){
-
-}
-
-
-void null_ast_loc_label(struct ast_loc_label *node){
-
-}
-
-
-void null_ast_arg(struct ast_arg *node){
-
-}
-
-*/

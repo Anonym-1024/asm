@@ -1,7 +1,7 @@
 NAME=asmc
 
 CC      := clang
-CFLAGS  := -O3 -MMD -MP -Isrc -std=c11  -Wall -Wextra
+CFLAGS  := -g -MMD -MP -Isrc -std=c11 -Wall -Wextra
 
 SRC_DIR := src
 OBJ_DIR := build

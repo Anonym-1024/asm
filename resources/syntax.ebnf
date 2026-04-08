@@ -1,6 +1,6 @@
 file = sections, ?TOKEN_EOF?;
 sections = { section };
-section = data_section | exec_section;
+section = data_section | code_section;
 
 data_section = data_dir, data_stmts;
 data_dir = ".DATA", ":", "\n";
@@ -14,10 +14,10 @@ initializer = ?TOKEN_NUM? | ?TOKEN_ASCII? | byte_initializer;
 byte_initializer = "{", numbers, "}";
 numbers = [ ?TOKEN_NUM?, { ",", ?TOKEN_NUM? } ];
 
-exec_section = exec_dir, exec_stmts;
-exec_dir = ".EXEC", ":", "\n";
-exec_stmts = { exec_stmt };
-exec_stmt = instruction_stmt | macro_stmt | label_stmt | loc_label_stmt | start_stmt;
+code_section = code_dir, code_stmts;
+code_dir = ".CODE", ":", "\n";
+code_stmts = { code_stmt };
+code_stmt = instruction_stmt | macro_stmt | label_stmt | loc_label_stmt | start_stmt;
 start_stmt = ".start", ":", "\n";
 instruction_stmt = ?TOKEN_INSTR?, [ condition_code ], args, "\n";
 condition_code = "(", ?TOKEN_COND_CODE?, ")";
@@ -27,9 +27,13 @@ immediate = "#", ?TOKEN_NUM?;
 label = "=", ?TOKEN_IDENT?;
 loc_label = direction_dir, "=", ?TOKEN_IDENT?;
 direction_dir = ".f" | ".b";
-loc_label_dist = "(", ?TOKEN_NUM?, ")";
-
-macro_stmt = ?TOKEN_MACRO?, [ condition_code ], args, "\n";
-
 loc_label_stmt = ".l", ?TOKEN_IDENT?, ":", "\n";
+
+head_section = head_dir, head_stmts;
+head_dir = ".HEAD", ":", "\n";
+head_stmts = { head_stmt };
+head_stmt = glob_stmt | extern_stmt;
+glob_stmt = ".glob", ?TOKEN_IDENT?, "\n";
+extern_stmt = ".extern", ?TOKEN_IDENT?, "\n";
+
 

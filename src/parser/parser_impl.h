@@ -51,13 +51,13 @@ enum parser_result parse_byte_initializer(struct parser_context *ctx, struct ast
 
 enum parser_result parse_numbers(struct parser_context *ctx, struct ast_terminal **numbers, uint32_t *byte_c);
 
-enum parser_result parse_exec_section(struct parser_context *ctx, struct ast_exec_section *section);
+enum parser_result parse_code_section(struct parser_context *ctx, struct ast_code_section *section);
 
-enum parser_result parse_exec_dir(struct parser_context *ctx);
+enum parser_result parse_code_dir(struct parser_context *ctx);
 
-enum parser_result parse_exec_stmts(struct parser_context *ctx, struct ast_exec_stmt **stmts, uint32_t *stmt_c);
+enum parser_result parse_code_stmts(struct parser_context *ctx, struct ast_code_stmt **stmts, uint32_t *stmt_c);
 
-enum parser_result parse_exec_stmt(struct parser_context *ctx, struct ast_exec_stmt *stmt);
+enum parser_result parse_code_stmt(struct parser_context *ctx, struct ast_code_stmt *stmt);
 
 enum parser_result parse_start_stmt(struct parser_context *ctx);
 
@@ -81,7 +81,17 @@ enum parser_result parse_loc_label_dist(struct parser_context *ctx, struct ast_t
 
 enum parser_result parse_loc_label_stmt(struct parser_context *ctx, struct ast_loc_label_stmt *stmt);
 
+enum parser_result parse_head_section(struct parser_context *ctx, struct ast_head_section *section);
 
+enum parser_result parse_head_dir(struct parser_context *ctx);
+
+enum parser_result parse_head_stmts(struct parser_context *ctx, struct ast_head_stmt **stmts, uint32_t stmt_c);
+
+enum parser_result parse_head_stmt(struct parser_context *ctx, struct ast_head_stmt *stmt);
+
+enum parser_result parse_glob_stmt(struct parser_context *ctx, struct ast_glob_stmt *stmt);
+
+enum parser_result parse_extern_stmt(struct parser_context *ctx, struct ast_extern_stmt *stmt);
 
 
 

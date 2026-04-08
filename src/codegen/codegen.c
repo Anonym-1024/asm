@@ -73,9 +73,9 @@ static enum codegen_result generate_bytes_stmt(struct ast_bytes_stmt *stmt, FILE
 }
 
 static enum codegen_result generate_data_stmt(struct ast_data_stmt *stmt, FILE *out) {
-    if (stmt->kind == AST_DATA_STMT_BYTE_STMT) {
+    if (stmt->kind == AST_DATA_STMT_BYTE) {
         try_else(generate_byte_stmt(&stmt->byte_stmt, out), CODEGEN_OK, return CODEGEN_ERR);
-    } else if (stmt->kind == AST_DATA_STMT_BYTES_STMT) {
+    } else if (stmt->kind == AST_DATA_STMT_BYTES) {
         try_else(generate_bytes_stmt(&stmt->bytes_stmt, out), CODEGEN_OK, return CODEGEN_ERR);
     }
     
@@ -109,18 +109,18 @@ static enum codegen_result generate_data_sections(struct ast_file *file, FILE *o
 
 
 
-static enum codegen_result resolve_loc_label(struct ast_loc_label *label, uint32_t pos, struct ast_exec_section *sec, uint32_t *offset) {
+static enum codegen_result resolve_loc_label(struct ast_loc_label *label, uint32_t pos, struct ast_code_section *sec, uint32_t *offset) {
     if (label->dir.token->dir == DIR_F) {
         for (uint32_t i = pos; i < sec->stmts_c; i++) {
-            if (sec->exec_stmts[i].kind == AST_EXEC_STMT_LOC_LABEL_STMT) {
-                *offset = sec->exec_stmts[i].loc_label_stmt.offset;
+            if (sec->code_stmts[i].kind == AST_CODE_STMT_LOC_LABEL) {
+                *offset = sec->code_stmts[i].loc_label_stmt.offset;
                 return CODEGEN_OK;
             }
         }
     } else {
         for (int64_t i = pos; i >= 0; i--) {
-            if (sec->exec_stmts[i].kind == AST_EXEC_STMT_LOC_LABEL_STMT) {
-                *offset = sec->exec_stmts[i].loc_label_stmt.offset;
+            if (sec->code_stmts[i].kind == AST_CODE_STMT_LOC_LABEL) {
+                *offset = sec->code_stmts[i].loc_label_stmt.offset;
                 return CODEGEN_OK;
             }
         }
@@ -155,7 +155,7 @@ static void add_imm16(uint8_t *byte2, uint8_t *byte3, uint16_t imm) {
 
 
 
-static enum codegen_result generate_instruction_stmt(struct ast_instruction_stmt *instr, FILE *out, struct compiler_error *err, struct ast_exec_section *sec, uint32_t pos) {
+static enum codegen_result generate_instruction_stmt(struct ast_instruction_stmt *instr, FILE *out, struct compiler_error *err, struct ast_code_section *sec, uint32_t pos) {
     uint8_t byte0 = 0;
     uint8_t byte1 = 0;
     uint8_t byte2 = 0;
@@ -219,8 +219,8 @@ static enum codegen_result generate_instruction_stmt(struct ast_instruction_stmt
 
     return CODEGEN_OK;
 }
-static enum codegen_result generate_exec_stmt(struct ast_exec_stmt *stmt, FILE *out, struct compiler_error *err, struct ast_exec_section *sec, uint32_t pos) {
-    if (stmt->kind == AST_EXEC_STMT_INSTRUCTION_STMT) {
+static enum codegen_result generate_code_stmt(struct ast_code_stmt *stmt, FILE *out, struct compiler_error *err, struct ast_code_section *sec, uint32_t pos) {
+    if (stmt->kind == AST_CODE_STMT_INSTRUCTION) {
         try_else(generate_instruction_stmt(&stmt->instruction_stmt, out, err, sec, pos), CODEGEN_OK, goto _error);
     }
 
@@ -232,20 +232,20 @@ _error:
 
 }
 
-static enum codegen_result generate_exec_stmts(struct ast_exec_section *sec, FILE *out, struct compiler_error *err) {
+static enum codegen_result generate_code_stmts(struct ast_code_section *sec, FILE *out, struct compiler_error *err) {
     uint32_t i;
     for (i = 0; i < sec->stmts_c; i++) {
-        try_else(generate_exec_stmt(&sec->exec_stmts[i], out, err, sec, i), CODEGEN_OK, return CODEGEN_ERR);
+        try_else(generate_code_stmt(&sec->code_stmts[i], out, err, sec, i), CODEGEN_OK, return CODEGEN_ERR);
     }
 
     
     return CODEGEN_OK;
 }
 
-static enum codegen_result generate_exec_sections(struct ast_file *file, FILE *out, struct compiler_error *err) {
+static enum codegen_result generate_code_sections(struct ast_file *file, FILE *out, struct compiler_error *err) {
     for (uint32_t i = 0; i < file->sec_n; i++) {
-        if (file->sections[i].kind == AST_EXEC_SECTION) {
-            try_else(generate_exec_stmts(&file->sections[i].exec_section, out, err), CODEGEN_OK, return CODEGEN_ERR);
+        if (file->sections[i].kind == AST_CODE_SECTION) {
+            try_else(generate_code_stmts(&file->sections[i].code_section, out, err), CODEGEN_OK, return CODEGEN_ERR);
         }
     }
     return CODEGEN_OK;
@@ -287,14 +287,14 @@ enum codegen_result generate_object_file(struct ast_file *file, struct sema_outp
     uint32_t symbol_n = hashmap_get_item_count(&sema->symbol_table);
 
     try_else(write_int32(out, symbol_n), CODEGEN_OK, goto _error);
-    try_else(write_int32(out, sema->exec_len), CODEGEN_OK, goto _error);
+    try_else(write_int32(out, sema->code_len), CODEGEN_OK, goto _error);
     try_else(write_int32(out, sema->data_len), CODEGEN_OK, goto _error);
     
 
 
     try_else(generate_symbol_table(&sema->symbol_table, out), CODEGEN_OK, goto _error);
 
-    try_else(generate_exec_sections(file, out, err), CODEGEN_OK, goto _error);
+    try_else(generate_code_sections(file, out, err), CODEGEN_OK, goto _error);
 
     try_else(generate_data_sections(file, out), CODEGEN_OK, goto _error);
 

@@ -10,7 +10,7 @@
 
 struct sema_output {
     struct hashmap symbol_table;
-    uint32_t exec_len;
+    uint32_t code_len;
     uint32_t data_len;
 };
 

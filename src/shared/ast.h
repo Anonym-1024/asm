@@ -23,8 +23,9 @@ struct ast_file {
 
 
 enum ast_section_kind {
-    AST_EXEC_SECTION,
-    AST_DATA_SECTION
+    AST_CODE_SECTION,
+    AST_DATA_SECTION,
+    AST_HEAD_SECTION
 };
 
 struct ast_data_section {
@@ -32,16 +33,44 @@ struct ast_data_section {
     uint32_t stmts_c;
 };
 
-struct ast_exec_section {
-    struct ast_exec_stmt *exec_stmts;
+struct ast_code_section {
+    struct ast_code_stmt *code_stmts;
     uint32_t stmts_c;
 };
+
+enum ast_head_stmt_kind {
+    HEAD_STMT_GLOB,
+    HEAD_STNT_EXTERN
+};
+
+struct ast_glob_stmt {
+    struct ast_terminal label;
+};
+
+struct ast_extern_stmt {
+    struct ast_terminal label;
+};
+
+struct ast_head_stmt {
+    enum ast_head_stmt_kind kind;
+    union {
+        struct ast_glob_stmt glob_stmt;
+        struct ast_extern_stmt extern_stmt;
+    };
+};
+
+struct ast_head_section {
+    struct ast_head_stmt *stmts;
+    uint32_t stmt_c;
+};
+
 
 struct ast_section {
     enum ast_section_kind kind;
     union {
         struct ast_data_section data_section;
-        struct ast_exec_section exec_section;
+        struct ast_code_section code_section;
+        struct ast_head_section head_section;
     };
 };
 
@@ -86,9 +115,9 @@ struct ast_label_stmt {
 };
 
 enum ast_data_stmt_kind {
-    AST_DATA_STMT_BYTE_STMT,
-    AST_DATA_STMT_BYTES_STMT,
-    AST_DATA_STMT_LABEL_STMT
+    AST_DATA_STMT_BYTE,
+    AST_DATA_STMT_BYTES,
+    AST_DATA_STMT_LABEL
 };
 
 struct ast_data_stmt {
@@ -111,12 +140,6 @@ struct ast_instruction_stmt {
     uint32_t args_c;
 };
 
-struct ast_macro_stmt {
-    struct ast_terminal instr;
-    struct ast_terminal condition_code;
-    struct ast_arg *args;
-    uint32_t args_c;
-};
 
 struct ast_loc_label_stmt {
     union {
@@ -125,20 +148,18 @@ struct ast_loc_label_stmt {
     };
 };
 
-enum ast_exec_stmt_kind {
-    AST_EXEC_STMT_INSTRUCTION_STMT,
-    AST_EXEC_STMT_MACRO_STMT,
-    AST_EXEC_STMT_LABEL_STMT,
-    AST_EXEC_STMT_LOC_LABEL_STMT,
-    AST_EXEC_STMT_START_STMT
+enum ast_code_stmt_kind {
+    AST_CODE_STMT_INSTRUCTION,
+    AST_CODE_STMT_LABEL,
+    AST_CODE_STMT_LOC_LABEL,
+    AST_CODE_STMT_START
 };
 
-struct ast_exec_stmt {
+struct ast_code_stmt {
     uint32_t line;
-    enum ast_exec_stmt_kind kind;
+    enum ast_code_stmt_kind kind;
     union {
         struct ast_instruction_stmt instruction_stmt;
-        struct ast_macro_stmt macro_stmt;
         struct ast_label_stmt label_stmt;
         struct ast_loc_label_stmt loc_label_stmt;
     };
@@ -191,32 +212,36 @@ struct ast_arg {
 
 
 
+
+
+
+
 void ast_file_deinit(struct ast_file *node);
 void ast_data_section_deinit(struct ast_data_section *node);
-void ast_exec_section_deinit(struct ast_exec_section *node);
+void ast_code_section_deinit(struct ast_code_section *node);
 void ast_section_deinit(struct ast_section *node);
 void ast_initializer_deinit(struct ast_initializer *node);
 void ast_byte_stmt_deinit(struct ast_byte_stmt *node);
 void ast_bytes_stmt_deinit(struct ast_bytes_stmt *node);
 void ast_data_stmt_deinit(struct ast_data_stmt *node);
 void ast_instruction_stmt_deinit(struct ast_instruction_stmt *node);
-void ast_macro_stmt_deinit(struct ast_macro_stmt *node);
-void ast_exec_stmt_deinit(struct ast_exec_stmt *node);
+void ast_code_stmt_deinit(struct ast_code_stmt *node);
+void ast_head_section_deinit(struct ast_head_section *node);
 
 
 
 
 void _ast_file_deinit(void *node);
 void _ast_data_section_deinit(void *node);
-void _ast_exec_section_deinit(void *node);
+void _ast_code_section_deinit(void *node);
 void _ast_section_deinit(void *node);
 void _ast_initializer_deinit(void *node);
 void _ast_byte_stmt_deinit(void *node);
 void _ast_bytes_stmt_deinit(void *node);
 void _ast_data_stmt_deinit(void *node);
 void _ast_instruction_stmt_deinit(void *node);
-void _ast_macro_stmt_deinit(void *node);
-void _ast_exec_stmt_deinit(void *node);
+void _ast_code_stmt_deinit(void *node);
+void _ast_head_section_deinit(void *node);
 
 
 
@@ -224,7 +249,7 @@ void _ast_exec_stmt_deinit(void *node);
 void null_ast_terminal(struct ast_terminal *node);
 void null_ast_file(struct ast_file *node);
 void null_ast_data_section(struct ast_data_section *node);
-void null_ast_exec_section(struct ast_exec_section *node);
+void null_ast_code_section(struct ast_code_section *node);
 void null_ast_section(struct ast_section *node);
 void null_ast_byte_initializer(struct ast_byte_initializer *node);
 void null_ast_initializer(struct ast_initializer *node);
@@ -233,9 +258,8 @@ void null_ast_bytes_stmt(struct ast_bytes_stmt *node);
 void null_ast_label_stmt(struct ast_label_stmt *node);
 void null_ast_data_stmt(struct ast_data_stmt *node);
 void null_ast_instruction_stmt(struct ast_instruction_stmt *node);
-void null_ast_macro_stmt(struct ast_macro_stmt *node);
 void null_ast_loc_label_stmt(struct ast_loc_label_stmt *node);
-void null_ast_exec_stmt(struct ast_exec_stmt *node);
+void null_ast_code_stmt(struct ast_code_stmt *node);
 void null_ast_loc_label(struct ast_loc_label *node);
 void null_ast_arg(struct ast_arg *node);
 

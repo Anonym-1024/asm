@@ -1,4 +1,4 @@
-.EXEC:
+.CODE:
     
     mov(ses) r6, #0f6x
     

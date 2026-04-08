@@ -16,7 +16,7 @@
 /*
     1) scan data, control inits, calculate sizes, save label offsets
     2) scan instructions, control args, calculate label offsets
-    3) return symbol table, exec len, data len, 
+    3) return symbol table, code len, data len, 
     4)
     5)
     6)
@@ -33,7 +33,7 @@ enum sema_arg_kind {
     SEMA_ARG_IMM8 = 1 << 4,
     SEMA_ARG_IMM16 = 1 << 5,
     SEMA_ARG_DATA_LABEL = 1 << 6,
-    SEMA_ARG_EXEC_LABEL = 1 << 7
+    SEMA_ARG_CODE_LABEL = 1 << 7
 };
 
 
@@ -44,7 +44,7 @@ struct sema_context {
     char error_msg[ERR_MSG_LEN];
 
     struct hashmap symbol_table;
-    uint32_t exec_len;
+    uint32_t code_len;
     uint32_t data_len;
 
 
@@ -68,18 +68,18 @@ static void generate_instr_format(struct sema_context *ctx) {
 
 
 static enum sema_result analyze_loc_label_stmt(struct ast_loc_label_stmt *stmt, struct sema_context *ctx) {
-    stmt->offset = ctx->exec_len;
+    stmt->offset = ctx->code_len;
     return SEMA_OK;
 }
 
-static enum sema_result analyze_exec_label_stmt(struct ast_label_stmt *stmt, struct sema_context *ctx) {
+static enum sema_result analyze_code_label_stmt(struct ast_label_stmt *stmt, struct sema_context *ctx) {
     if (hashmap_find(&ctx->symbol_table, stmt->ident.token->lexeme) == HMAP_OK) {
         ctx->col = stmt->ident.token->col;
         snprintf(ctx->error_msg, ERR_MSG_LEN, "Redefinition of label '%.20s'.", stmt->ident.token->lexeme);
         return SEMA_ERR;
     } 
 
-    try_else(hashmap_add(&ctx->symbol_table, stmt->ident.token->lexeme, ctx->exec_len), HMAP_OK, return SEMA_ERR);
+    try_else(hashmap_add(&ctx->symbol_table, stmt->ident.token->lexeme, ctx->code_len), HMAP_OK, return SEMA_ERR);
 
     return SEMA_OK;
 }
@@ -91,7 +91,7 @@ static enum sema_result analyze_start_stmt(struct sema_context *ctx) {
         return SEMA_ERR;
     } 
 
-    try_else(hashmap_add(&ctx->symbol_table, ".start", ctx->exec_len), HMAP_OK, return SEMA_ERR);
+    try_else(hashmap_add(&ctx->symbol_table, ".start", ctx->code_len), HMAP_OK, return SEMA_ERR);
 
     return SEMA_OK;
 }
@@ -103,7 +103,7 @@ static enum sema_result analyze_data_label_stmt(struct ast_label_stmt *stmt, str
         return SEMA_ERR;
     } 
 
-    try_else(hashmap_add(&ctx->symbol_table, stmt->ident.token->lexeme, ctx->data_len + ctx->exec_len), HMAP_OK, return SEMA_ERR);
+    try_else(hashmap_add(&ctx->symbol_table, stmt->ident.token->lexeme, ctx->data_len + ctx->code_len), HMAP_OK, return SEMA_ERR);
 
     return SEMA_OK;
 }
@@ -166,11 +166,11 @@ static enum sema_result analyze_byte_stmt(struct ast_byte_stmt *stmt, struct sem
 }
 
 static enum sema_result analyze_data_stmt(struct ast_data_stmt *stmt, struct sema_context *ctx) {
-    if (stmt->kind == AST_DATA_STMT_BYTE_STMT) {
+    if (stmt->kind == AST_DATA_STMT_BYTE) {
         try_else(analyze_byte_stmt(&stmt->byte_stmt, ctx), SEMA_OK, goto _error);
-    } else if (stmt->kind == AST_DATA_STMT_BYTES_STMT) {
+    } else if (stmt->kind == AST_DATA_STMT_BYTES) {
         try_else(analyze_bytes_stmt(&stmt->bytes_stmt, ctx), SEMA_OK, goto _error);
-    } else if (stmt->kind == AST_DATA_STMT_LABEL_STMT) {
+    } else if (stmt->kind == AST_DATA_STMT_LABEL) {
         try_else(analyze_data_label_stmt(&stmt->label_stmt, ctx), SEMA_OK, goto _error);
     }
     
@@ -187,7 +187,7 @@ static enum sema_result analyze_data_stmts(struct ast_data_section *sec, struct 
     for (i = 0; i < sec->stmts_c; i++) {
         try_else(analyze_data_stmt(&sec->data_stmts[i], ctx), SEMA_OK, return SEMA_ERR);
     }
-    if (sec->data_stmts[i].kind == AST_DATA_STMT_LABEL_STMT) {
+    if (sec->data_stmts[i].kind == AST_DATA_STMT_LABEL) {
         ctx->line = sec->data_stmts[i].line;
         ctx->col = sec->data_stmts[i].label_stmt.ident.token->col;
         snprintf(ctx->error_msg, ERR_MSG_LEN, "Label '%.20s' does not point to anything", sec->data_stmts[i].label_stmt.ident.token->lexeme);
@@ -270,11 +270,11 @@ static enum sema_result analyze_instruction_stmt(struct ast_instruction_stmt *st
             continue;
         } 
 
-        if ((req & SEMA_ARG_EXEC_LABEL) && arg->kind == AST_ARG_LABEL) {
+        if ((req & SEMA_ARG_CODE_LABEL) && arg->kind == AST_ARG_LABEL) {
             continue;
         } 
 
-        if ((req & SEMA_ARG_EXEC_LABEL) && arg->kind == AST_ARG_LOC_LABEL) {
+        if ((req & SEMA_ARG_CODE_LABEL) && arg->kind == AST_ARG_LOC_LABEL) {
             continue;
         } 
 
@@ -284,20 +284,20 @@ static enum sema_result analyze_instruction_stmt(struct ast_instruction_stmt *st
     }
     
 
-    ctx->exec_len += 4;
+    ctx->code_len += 4;
     return SEMA_OK;
 
 
 }
 
-static enum sema_result analyze_exec_stmt(struct ast_exec_stmt *stmt, struct sema_context *ctx) {
-    if (stmt->kind == AST_EXEC_STMT_INSTRUCTION_STMT) {
+static enum sema_result analyze_code_stmt(struct ast_code_stmt *stmt, struct sema_context *ctx) {
+    if (stmt->kind == AST_CODE_STMT_INSTRUCTION) {
         try_else(analyze_instruction_stmt(&stmt->instruction_stmt, ctx), SEMA_OK, goto _error);
-    } else if (stmt->kind == AST_EXEC_STMT_LABEL_STMT) {
-        try_else(analyze_exec_label_stmt(&stmt->label_stmt, ctx), SEMA_OK, goto _error);
-    } else if (stmt->kind == AST_EXEC_STMT_LOC_LABEL_STMT) {
+    } else if (stmt->kind == AST_CODE_STMT_LABEL) {
+        try_else(analyze_code_label_stmt(&stmt->label_stmt, ctx), SEMA_OK, goto _error);
+    } else if (stmt->kind == AST_CODE_STMT_LOC_LABEL) {
         try_else(analyze_loc_label_stmt(&stmt->loc_label_stmt, ctx), SEMA_OK, goto _error);
-    } else if (stmt->kind == AST_EXEC_STMT_START_STMT) {
+    } else if (stmt->kind == AST_CODE_STMT_START) {
         try_else(analyze_start_stmt(ctx), SEMA_OK, goto _error);
     }
 
@@ -308,22 +308,22 @@ _error:
     return SEMA_ERR;
 }
 
-static enum sema_result analyze_exec_stmts(struct ast_exec_section *sec, struct sema_context *ctx) {
+static enum sema_result analyze_code_stmts(struct ast_code_section *sec, struct sema_context *ctx) {
     uint32_t i;
     for (i = 0; i < sec->stmts_c; i++) {
-        try_else(analyze_exec_stmt(&sec->exec_stmts[i], ctx), SEMA_OK, return SEMA_ERR);
+        try_else(analyze_code_stmt(&sec->code_stmts[i], ctx), SEMA_OK, return SEMA_ERR);
     }
 
-    if (sec->exec_stmts[i].kind == AST_EXEC_STMT_LABEL_STMT) {
-        ctx->line = sec->exec_stmts[i].line;
-        ctx->col = sec->exec_stmts[i].label_stmt.ident.token->col;
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "Label '%.20s' does not point to anything", sec->exec_stmts[i].label_stmt.ident.token->lexeme);
+    if (sec->code_stmts[i].kind == AST_CODE_STMT_LABEL) {
+        ctx->line = sec->code_stmts[i].line;
+        ctx->col = sec->code_stmts[i].label_stmt.ident.token->col;
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Label '%.20s' does not point to anything", sec->code_stmts[i].label_stmt.ident.token->lexeme);
         return SEMA_ERR;
     }
 
-    if (sec->exec_stmts[i].kind == AST_EXEC_STMT_LOC_LABEL_STMT) {
-        ctx->line = sec->exec_stmts[i].line;
-        ctx->col = sec->exec_stmts[i].label_stmt.ident.token->col;
+    if (sec->code_stmts[i].kind == AST_CODE_STMT_LOC_LABEL) {
+        ctx->line = sec->code_stmts[i].line;
+        ctx->col = sec->code_stmts[i].label_stmt.ident.token->col;
         snprintf(ctx->error_msg, ERR_MSG_LEN, "Local label does not point to anything");
         return SEMA_ERR;
 
@@ -331,10 +331,10 @@ static enum sema_result analyze_exec_stmts(struct ast_exec_section *sec, struct 
     return SEMA_OK;
 }
 
-static enum sema_result analyze_exec_sections(struct ast_file *file, struct sema_context *ctx) {
+static enum sema_result analyze_code_sections(struct ast_file *file, struct sema_context *ctx) {
     for (uint32_t i = 0; i < file->sec_n; i++) {
-        if (file->sections[i].kind == AST_EXEC_SECTION) {
-            try_else(analyze_exec_stmts(&file->sections[i].exec_section, ctx), SEMA_OK, return SEMA_ERR);
+        if (file->sections[i].kind == AST_CODE_SECTION) {
+            try_else(analyze_code_stmts(&file->sections[i].code_section, ctx), SEMA_OK, return SEMA_ERR);
         }
     }
     return SEMA_OK;
@@ -352,7 +352,7 @@ enum sema_result perform_semantic_analysis(struct ast_file *file, struct sema_ou
         .col = 0,
         .line = 1,
         .data_len = 0,
-        .exec_len = 0,
+        .code_len = 0,
     };
 
 
@@ -361,7 +361,7 @@ enum sema_result perform_semantic_analysis(struct ast_file *file, struct sema_ou
 
     generate_instr_format(&ctx);
 
-    try_else(analyze_exec_sections(file, &ctx), SEMA_OK, goto _error);
+    try_else(analyze_code_sections(file, &ctx), SEMA_OK, goto _error);
 
     try_else(analyze_data_sections(file, &ctx), SEMA_OK, goto _error);
 
@@ -369,7 +369,7 @@ enum sema_result perform_semantic_analysis(struct ast_file *file, struct sema_ou
 
 
     out->symbol_table = ctx.symbol_table;
-    out->exec_len = ctx.exec_len;
+    out->code_len = ctx.code_len;
     out->data_len = ctx.data_len;
     
     return SEMA_OK;
