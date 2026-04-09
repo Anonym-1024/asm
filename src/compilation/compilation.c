@@ -29,6 +29,7 @@ enum compilation_result compile_source_file(const char *in, const char *out, str
     bool _tokens = false;
     bool _ast_root = false;
     bool _sema_output = false;
+    bool _out = false;
 
     struct source_file src;
     src.file = fopen(in, "r");
@@ -59,9 +60,16 @@ enum compilation_result compile_source_file(const char *in, const char *out, str
     if (out == NULL) {
         out = malloc(sizeof(char) * (strlen(src.filename) + 3));
         sprintf((char*)out, "%s.o", src.filename);
+        _out = true;
     }
 
+
     try_else(generate_object_file(&ast_root, &sema_out, out, err), CODEGEN_OK, goto _error);
+
+    if (_out) {
+        free((char*)out);
+        _out = false;
+    }
 
     for (uint32_t i = 0; i < tokens_n; i++) {
         token_deinit(&tokens[i]);
@@ -97,6 +105,10 @@ _error:
 
     if (_sema_output) {
         sema_output_deinit(&sema_out);
+    }
+
+    if (_out) {
+        free((char*)out);
     }
 
     return COMP_ERR;

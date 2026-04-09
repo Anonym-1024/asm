@@ -31,6 +31,23 @@ struct compiled_instruction {
 };
 
 
+struct linker_context {
+    struct object_file *objs;
+    int objs_n;
+    FILE *out;
+
+    uint32_t total_code_len;
+    uint32_t total_data_len;
+
+
+
+    struct hashmap global_symbol_table;
+
+    char err_msg[ERR_MSG_LEN];
+    const char *current_file;
+
+};
+
 static enum linker_result read_str(FILE *f, char **out) {
     struct vector buffer;
     try_else(vec_init(&buffer, 10, sizeof(char)), VEC_OK, return LINK_ERR);
@@ -131,48 +148,40 @@ _error:
 }
 
 
-static enum linker_result build_symbol_table(struct object_file *objs, int obj_n, struct hashmap *table, struct compiler_error *err) {
+static enum linker_result build_symbol_table(struct linker_context *ctx) {
 
-    try_else(hashmap_init(table, 256), HMAP_OK, return LINK_ERR);
-
-    uint32_t total_code_len = 0;
-    uint32_t total_data_len = 0;
-
-    for (int i = 0; i < obj_n; i++) {
-        struct object_file *obj = &objs[i];
-        total_code_len += obj->code_len;
-        total_data_len += obj->data_len;
-    }
-
-    if (total_data_len + total_code_len > UINT32_MAX) {
-        snprintf(err->msg, ERR_MSG_LEN, "Executable size exceeds maximum addressable space.");
-        goto _error;
-    }
+    try_else(hashmap_init(&ctx->global_symbol_table, 256), HMAP_OK, return LINK_ERR);
 
 
-    uint32_t global_code_offset = 0;
+
+
+
+
+    uint32_t global_code_offset = 4;
     uint32_t global_data_offset = 0;
-    for (int i = 0; i < obj_n; i++) {
-        struct object_file *obj = &objs[i];
-        err->file = obj->filename;
+    for (int i = 0; i < ctx->objs_n; i++) {
+        struct object_file *obj = &ctx->objs[i];
+        ctx->current_file = obj->filename;
         for (uint32_t j = 0; j < obj->symbol_table_len; j++) {
             char *key;
             try_else(read_str(obj->file, &key), LINK_OK, goto _error);
-            uint32_t offset;
-            try_else(read_int32(obj->file, &offset), LINK_OK, goto _error);
-            if (offset < obj->code_len) {
-                offset += global_code_offset;
-            } else {
-                offset = (offset - obj->code_len) + total_code_len + global_data_offset;
-            }
-            if (hashmap_find(table, key) == HMAP_OK) {
-                snprintf(err->msg, ERR_MSG_LEN, "Found label '%.20s' redefinition.", key);
+            if (hashmap_find(&ctx->global_symbol_table, key) == HMAP_OK) {
+                snprintf(ctx->err_msg, ERR_MSG_LEN, "Found label '%.20s' redefinition.", key);
 
                 free(key);
                 goto _error;
             }
 
-            try_else(hashmap_add(table, key, offset), HMAP_OK, goto _error);
+            uint32_t offset;
+            try_else(read_int32(obj->file, &offset), LINK_OK, goto _error);
+            if (offset < obj->code_len) {
+                offset += global_code_offset;
+            } else {
+                offset = (offset - obj->code_len) + ctx->total_code_len + global_data_offset;
+            }
+
+
+            try_else(hashmap_add(&ctx->global_symbol_table, key, offset), HMAP_OK, goto _error);
             free(key);
         }
         global_data_offset += obj->data_len;
@@ -183,48 +192,67 @@ static enum linker_result build_symbol_table(struct object_file *objs, int obj_n
     return LINK_OK;
 
 _error:
-    hashmap_deinit(table);
+    hashmap_deinit(&ctx->global_symbol_table);
     return LINK_ERR;
 }
 
 
+static enum linker_result resolve_label(struct linker_context *ctx, struct compiled_instruction *instr, uint32_t global_code_offset, uint32_t global_data_offset, uint32_t code_len) {
+
+    uint32_t offset;
+    if (strcmp(instr->label, "") == 0) {
+
+    } else if (strcmp(instr->label, "~") == 0) {
+        offset = 0;
+        offset |= instr->bytes[2];
+        offset |= instr->bytes[3] << 8;
 
 
-static enum linker_result write_code_sections(struct object_file *objs, int obj_n, struct hashmap *table, FILE *fout, struct compiler_error *err) {
+        if (offset < code_len) {
+
+            offset += global_code_offset;
+            instr->bytes[2] = offset;
+            instr->bytes[3] = offset >> 8;
+        } else {
+            offset = (offset - code_len) + ctx->total_code_len + global_data_offset;
+            instr->bytes[2] = offset;
+            instr->bytes[3] = offset >> 8;
+        }
+
+
+    } else {
+        if (hashmap_get(&ctx->global_symbol_table, instr->label, &offset) != HMAP_OK) {
+            snprintf(ctx->err_msg, ERR_MSG_LEN, "Undefined symbol: %s", instr->label);
+            return LINK_ERR;
+        }
+
+        instr->bytes[2] = offset;
+        instr->bytes[3] = offset >> 8;
+
+    }
+    return LINK_OK;
+}
+
+static enum linker_result write_code_sections(struct linker_context *ctx) {
+
+    uint32_t global_code_offset = 4;
+    uint32_t global_data_offset = 0;
+
     struct compiled_instruction instr;
     instr.label = NULL;
 
-    uint32_t global_code_offset = 0;
-    for (int i = 0; i < obj_n; i++) {
-        struct object_file *obj = &objs[i];
-        err->file = obj->filename;
+    for (int i = 0; i < ctx->objs_n; i++) {
+        struct object_file *obj = &ctx->objs[i];
+        ctx->current_file = obj->filename;
 
         for (uint32_t j = 0; j < obj->code_len; j+=4) {
             try_else(read_instr(obj->file, &instr), LINK_OK, goto _error)
-            if (*instr.label == '\0') {
-                try_else(fwrite(&instr.bytes, sizeof(uint8_t), 4, fout), 4, goto _error);
-
-            } else if (*instr.label == '~') {
-                uint16_t new_offset = 0;
-                new_offset |= (uint16_t)instr.bytes[2];
-                new_offset |= (uint16_t)instr.bytes[3] << 8;
-                new_offset += global_code_offset;
-                instr.bytes[3] = (new_offset >> 8);
-                instr.bytes[2] = new_offset;
-                try_else(fwrite(&instr.bytes, sizeof(uint8_t), 4, fout), 4, goto _error);
-            } else {
-                uint32_t new_offset;;
-                if (hashmap_get(table, instr.label, &new_offset) != HMAP_OK) {
-                    snprintf(err->msg, ERR_MSG_LEN, "Label '%.20s' has not been defined in any file.", instr.label);
-                    goto _error;
-                }
-                instr.bytes[3] = (new_offset >> 8);
-                instr.bytes[2] = new_offset;
-                try_else(fwrite(&instr.bytes, sizeof(uint8_t), 4, fout), 4, goto _error);
-            }
+            try_else(resolve_label(ctx, &instr, global_code_offset, global_data_offset, obj->code_len), LINK_OK, goto _error);
+            try_else(fwrite(&instr.bytes, sizeof(uint8_t), 4, ctx->out), 4, goto _error);
             free(instr.label);
             instr.label = NULL;
         }
+        global_data_offset += obj->data_len;
         global_code_offset += obj->code_len;
 
     }
@@ -236,15 +264,15 @@ _error:
     return LINK_ERR;
 }
 
-static enum linker_result write_data_sections(struct object_file *objs, int obj_n, FILE *fout, struct compiler_error *err) {
+static enum linker_result write_data_sections(struct linker_context *ctx) {
 
-    for (int i = 0; i < obj_n; i++) {
-        struct object_file *obj = &objs[i];
-        err->file = obj->filename;
+    for (int i = 0; i < ctx->objs_n; i++) {
+        struct object_file *obj = &ctx->objs[i];
+        ctx->current_file = obj->filename;
         uint8_t byte;
         while (fread(&byte, sizeof(uint8_t), 1, obj->file) == 1) {
 
-            try_else(fwrite(&byte, sizeof(uint8_t), 1, fout), 1, return LINK_ERR);
+            try_else(fwrite(&byte, sizeof(uint8_t), 1, ctx->out), 1, return LINK_ERR);
         }
     }
 
@@ -254,31 +282,52 @@ static enum linker_result write_data_sections(struct object_file *objs, int obj_
 
 
 
+static enum linker_result calculate_total_len(struct linker_context *ctx) {
+    ctx->total_code_len = 4;
+    ctx->total_data_len = 0;
+    for (int i = 0; i < ctx->objs_n; i++) {
+        struct object_file *obj = &ctx->objs[i];
+        ctx->total_code_len += obj->code_len;
+        ctx->total_data_len += obj->data_len;
+    }
+    if (ctx->total_data_len + ctx->total_code_len > UINT32_MAX) {
+        snprintf(ctx->err_msg, ERR_MSG_LEN, "Binary size exceeds maximum addressable space.");
+        return LINK_ERR;
+    }
+    return LINK_OK;
+}
+
 
 
 enum linker_result link_object_files(const char **files, int files_n, const char *out, struct compiler_error *err) {
 
-    strcpy(err->msg, "Unknown error.");
+    struct linker_context ctx = {
+        .current_file = "",
+        .objs_n = files_n,
+        .total_code_len = 0,
+        .total_data_len = 0,
+
+    };
+
+    strcpy(ctx.err_msg, "Unknown error.");
     err->file = NULL;
 
     bool _table = false;
     bool _objs = false;
     bool _fout = false;
 
-    struct object_file *objs;
-    try_else(open_obj_files(files, files_n, &objs, err), LINK_OK, goto _error);
+    try_else(open_obj_files(files, files_n, &ctx.objs, err), LINK_OK, goto _error);
     _objs = true;
 
 
-
-    struct hashmap symbol_table;
-    try_else(build_symbol_table(objs, files_n, &symbol_table, err), LINK_OK, goto _error);
+    try_else(calculate_total_len(&ctx), LINK_OK, goto _error);
+    try_else(build_symbol_table(&ctx), LINK_OK, goto _error);
     _table = true;
 
 
     uint32_t start;
-    if (hashmap_get(&symbol_table, ".start", &start) == HMAP_NO_ENTRY) {
-        snprintf(err->msg, ERR_MSG_LEN, "Symbol '.start' has not been defined.");
+    if (hashmap_get(&ctx.global_symbol_table, ".start", &start) == HMAP_NO_ENTRY) {
+        snprintf(ctx.err_msg, ERR_MSG_LEN, "Symbol '.start' has not been defined.");
         goto _error;
     }
 
@@ -288,38 +337,41 @@ enum linker_result link_object_files(const char **files, int files_n, const char
     if (out == NULL) {
         out = "a.bin";
     }
-    FILE *fout = fopen(out, "wb");
-    if (fout == NULL) {
+    ctx.out = fopen(out, "wb");
+    if (ctx.out == NULL) {
         goto _error;
     }
 
 
-    try_else(fwrite(&(uint8_t[]){0x05, 0xb0, start, start>>8}, sizeof(uint8_t), 4, fout), 4, return LINK_ERR);
+    try_else(fwrite(&(uint8_t[]){0x05, 0xb0, start, start>>8}, sizeof(uint8_t), 4, ctx.out), 4, return LINK_ERR);
 
-    try_else(write_code_sections(objs, files_n, &symbol_table, fout, err), LINK_OK, goto _error);
-    try_else(write_data_sections(objs, files_n, fout, err), LINK_OK, goto _error);
+    try_else(write_code_sections(&ctx), LINK_OK, goto _error);
+    try_else(write_data_sections(&ctx), LINK_OK, goto _error);
 
 
-    close_obj_files(objs, files_n);
-    fclose(fout);
+    close_obj_files(ctx.objs, files_n);
+    fclose(ctx.out);
+    hashmap_deinit(&ctx.global_symbol_table);
     return LINK_OK;
 
 _error:
 
     if (_objs) {
-        close_obj_files(objs, files_n);
+        close_obj_files(ctx.objs, files_n);
     }
 
     if (_table) {
-        hashmap_deinit(&symbol_table);
+        hashmap_deinit(&ctx.global_symbol_table);
     }
 
     if (_fout) {
-        fclose(fout);
+        fclose(ctx.out);
     }
 
     err->col = 0;
     err->line = 0;
     err->kind = CERROR_LINKER;
+    err->file = ctx.current_file;
+    strncpy(err->msg, ctx.err_msg, ERR_MSG_LEN);
     return LINK_ERR;
 }

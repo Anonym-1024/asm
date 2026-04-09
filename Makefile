@@ -1,7 +1,7 @@
 NAME=asmc
 
 CC      := clang
-CFLAGS  := -g -MMD -MP -Isrc -std=c11 -Wall -Wextra
+CFLAGS  := -O2 -DNDEBUG -MMD -MP -Isrc -std=c11 -Wall -Wextra
 
 SRC_DIR := src
 OBJ_DIR := build
@@ -23,7 +23,3 @@ clean:
 	rm -rf $(OBJ_DIR) $(NAME)
 
 rebuild: clean $(NAME)
-
-
-
-

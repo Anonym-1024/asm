@@ -4,7 +4,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdint.h>
 
 
@@ -17,7 +16,7 @@ enum compiler_error_kind {
     CERROR_UNKNOWN
 };
 
-#define ERR_MSG_LEN 200
+#define ERR_MSG_LEN 150
 
 struct compiler_error {
     enum compiler_error_kind kind;

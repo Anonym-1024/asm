@@ -443,7 +443,7 @@ static enum lexer_result make_hash_maps(struct lexer_context *ctx) {
 
     try_else(hashmap_init(&ctx->cond_code_map, 32), HMAP_OK, goto _error);
     _cond_code_map = true;
-    #define X(u, l) try_else(hashmap_add(&ctx->cond_code_map, #l, COND_##u), HMAP_OK, goto _error);
+    #define X(u, l, n) try_else(hashmap_add(&ctx->cond_code_map, #l, COND_##u), HMAP_OK, goto _error);
     #include "resources/cond_code.def"
     #undef X
 

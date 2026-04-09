@@ -3,7 +3,6 @@
 #define __AST_HEADER__
 
 
-#include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
 

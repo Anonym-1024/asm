@@ -93,7 +93,8 @@ static enum sema_result analyze_start_stmt(struct sema_context *ctx) {
         return SEMA_ERR;
     }
 
-    try_else(hashmap_add(&ctx->symbol_table, ".start", ctx->code_len), HMAP_OK, return SEMA_ERR);
+
+    try_else(hashmap_add(&ctx->global_symbol_table, ".start", ctx->code_len), HMAP_OK, return SEMA_ERR);
 
     return SEMA_OK;
 }
@@ -189,10 +190,10 @@ static enum sema_result analyze_data_stmts(struct ast_data_section *sec, struct 
     for (i = 0; i < sec->stmts_n; i++) {
         try_else(analyze_data_stmt(&sec->data_stmts[i], ctx), SEMA_OK, return SEMA_ERR);
     }
-    if (sec->data_stmts[i].kind == AST_DATA_STMT_LABEL) {
-        ctx->line = sec->data_stmts[i].line;
-        ctx->col = sec->data_stmts[i].label_stmt.ident.token->col;
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "Label '%.20s' does not point to anything", sec->data_stmts[i].label_stmt.ident.token->lexeme);
+    if (sec->data_stmts[i-1].kind == AST_DATA_STMT_LABEL) {
+        ctx->line = sec->data_stmts[i-1].line;
+        ctx->col = sec->data_stmts[i-1].label_stmt.ident.token->col;
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Label '%.20s' does not point to anything", sec->data_stmts[i-1].label_stmt.ident.token->lexeme);
         return SEMA_ERR;
 
     }
@@ -316,16 +317,16 @@ static enum sema_result analyze_code_stmts(struct ast_code_section *sec, struct 
         try_else(analyze_code_stmt(&sec->code_stmts[i], ctx), SEMA_OK, return SEMA_ERR);
     }
 
-    if (sec->code_stmts[i].kind == AST_CODE_STMT_LABEL) {
-        ctx->line = sec->code_stmts[i].line;
-        ctx->col = sec->code_stmts[i].label_stmt.ident.token->col;
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "Label '%.20s' does not point to anything", sec->code_stmts[i].label_stmt.ident.token->lexeme);
+    if (sec->code_stmts[i-1].kind == AST_CODE_STMT_LABEL) {
+        ctx->line = sec->code_stmts[i-1].line;
+        ctx->col = sec->code_stmts[i-1].label_stmt.ident.token->col;
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Label '%.20s' does not point to anything", sec->code_stmts[i-1].label_stmt.ident.token->lexeme);
         return SEMA_ERR;
     }
 
-    if (sec->code_stmts[i].kind == AST_CODE_STMT_LOC_LABEL) {
-        ctx->line = sec->code_stmts[i].line;
-        ctx->col = sec->code_stmts[i].label_stmt.ident.token->col;
+    if (sec->code_stmts[i-1].kind == AST_CODE_STMT_LOC_LABEL) {
+        ctx->line = sec->code_stmts[i-1].line;
+        ctx->col = sec->code_stmts[i-1].label_stmt.ident.token->col;
         snprintf(ctx->error_msg, ERR_MSG_LEN, "Local label does not point to anything");
         return SEMA_ERR;
 
@@ -436,11 +437,13 @@ enum sema_result perform_semantic_analysis(struct ast_file *file, struct sema_ou
 
 
 
-    out->symbol_table = ctx.symbol_table;
     out->global_symbol_table = ctx.global_symbol_table;
     out->external_symbol_table = ctx.external_symbol_table;
+    out->symbol_table = ctx.symbol_table;
     out->code_len = ctx.code_len;
     out->data_len = ctx.data_len;
+
+
 
     return SEMA_OK;
 

@@ -1,7 +1,7 @@
 #ifndef __TOKEN_HEADER__
 #define __TOKEN_HEADER__
 
-#include <stdlib.h>
+
 #include <stdint.h>
 
 enum token_kind {
@@ -66,7 +66,7 @@ enum data_unit_token {
 };
 
 enum cond_code_token {
-    #define X(u, l) COND_##u,
+    #define X(u, l, n) COND_##u = n,
     #include "resources/cond_code.def"
     #undef X
 };
@@ -94,7 +94,7 @@ struct token {
         enum port_token port;
         enum punctuation_token punct;
     };
-    
+
 };
 
 void token_deinit(struct token *ptr);
