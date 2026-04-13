@@ -8,7 +8,6 @@ enum token_kind {
     TOKEN_DIR,
     TOKEN_DATA_UNIT,
     TOKEN_INSTR,
-    TOKEN_MACRO,
     TOKEN_COND_CODE,
     TOKEN_REG,
     TOKEN_SYS_REG,

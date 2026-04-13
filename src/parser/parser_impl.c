@@ -262,7 +262,6 @@ bool follows_data_stmt(struct parser_context *ctx) {
 
 static bool follows_code_stmt(struct parser_context *ctx) {
     return is_matching_kind(ctx, 0, TOKEN_INSTR)
-            //|| is_matching_kind(ctx, 0, TOKEN_MACRO)
             || is_matching_kind(ctx, 0, TOKEN_IDENT)
             || is_matching_directive(ctx, 0, DIR_L)
             || is_matching_directive(ctx, 0, DIR_ORG);

@@ -5,7 +5,8 @@ section = data_section | code_section;
 data_section = data_dir, data_stmts;
 data_dir = ".DATA", ":", "\n";
 data_stmts = { data_stmt };
-data_stmt = byte_stmt | bytes_stmt | label_stmt;
+data_stmt = byte_stmt | bytes_stmt | label_stmt | org_stmt;
+org_stmt = ".org", ?TOKEN_NUM?;
 
 byte_stmt = "byte", [ initializer ], "\n";
 bytes_stmt = "bytes", "(", ?TOKEN_NUM?, ")", [ initializer ], "\n";
@@ -17,9 +18,9 @@ numbers = [ ?TOKEN_NUM?, { ",", ?TOKEN_NUM? } ];
 code_section = code_dir, code_stmts;
 code_dir = ".CODE", ":", "\n";
 code_stmts = { code_stmt };
-code_stmt = instruction_stmt | macro_stmt | label_stmt | loc_label_stmt | org_stmt;
+code_stmt = instruction_stmt | label_stmt | loc_label_stmt | org_stmt;
 // REMOVED: start_stmt = ".start", ":", "\n";
-org_stmt = ".org", ?TOKEN_NUM?;
+
 instruction_stmt = ?TOKEN_INSTR?, [ condition_code ], args, "\n";
 condition_code = "(", ?TOKEN_COND_CODE?, ")";
 args = [ arg, { ",", arg} ];

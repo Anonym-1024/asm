@@ -23,7 +23,6 @@ struct lexer_context {
 
     struct hashmap dir_map;
     struct hashmap instr_map;
-    //struct hashmap macro_map;
     struct hashmap reg_map;
     struct hashmap sys_reg_map;
     struct hashmap addr_reg_map;
@@ -412,16 +411,7 @@ static enum lexer_result make_hash_maps(struct lexer_context *ctx) {
     #include "resources/instructions.def"
     #undef X
 
-    /* MACROS
 
-    try_else(hashmap_init(&ctx->macro_map, 16), HMAP_OK, goto _error);
-    _macro_map = true;
-
-    try_else(hashmap_add(&ctx->macro_map, "!b", MACRO_B), HMAP_OK, goto _error);
-    try_else(hashmap_add(&ctx->macro_map, "!bl", MACRO_BL), HMAP_OK, goto _error);
-    try_else(hashmap_add(&ctx->macro_map, "!movl", MACRO_MOVL), HMAP_OK, goto _error);
-    */
-    /* DIRECTIVES */
 
     try_else(hashmap_init(&ctx->dir_map, 16), HMAP_OK, goto _error);
     _dir_map = true;
@@ -544,10 +534,6 @@ enum lexer_result tokenise(struct source_file *in, struct token **out, uint32_t 
         } else if (ctx.c == '.') {
             try_else(read_directive(&ctx), LEX_OK, goto _error);
 
-        } /*else if (ctx.c == '!') {
-            try_else(read_macro(&ctx), LEX_OK, goto _error);
-
-        }*/
         else if (ctx.c == '"') {
             try_else(read_ascii(&ctx), LEX_OK, goto _error);
 
@@ -590,7 +576,6 @@ enum lexer_result tokenise(struct source_file *in, struct token **out, uint32_t 
     hashmap_deinit(&ctx.addr_reg_map);
     hashmap_deinit(&ctx.sys_reg_map);
     hashmap_deinit(&ctx.reg_map);
-    //hashmap_deinit(&ctx.macro_map);
     hashmap_deinit(&ctx.instr_map);
     hashmap_deinit(&ctx.dir_map);
 
@@ -619,7 +604,6 @@ _error:
     hashmap_deinit(&ctx.addr_reg_map);
     hashmap_deinit(&ctx.sys_reg_map);
     hashmap_deinit(&ctx.reg_map);
-    //hashmap_deinit(&ctx.macro_map);
     hashmap_deinit(&ctx.instr_map);
     hashmap_deinit(&ctx.dir_map);
 

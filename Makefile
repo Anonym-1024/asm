@@ -23,3 +23,6 @@ clean:
 	rm -rf $(OBJ_DIR) $(NAME)
 
 rebuild: clean $(NAME)
+
+cat:
+	cat $(SRCS) >> all_sources.c
