@@ -41,13 +41,13 @@ enum sema_arg_kind {
 struct sema_context {
     uint32_t line;
     uint16_t col;
-    char error_msg[ERR_MSG_LEN];
+    char error_msg[ERR_MSG_LEN + 1];
 
     struct hashmap symbol_table;
     struct hashmap global_symbol_table;
     struct hashmap external_symbol_table;
-    uint32_t code_len;
-    uint32_t data_len;
+    uint32_t code_offset;
+    uint32_t data_offset;
 
 
     enum sema_arg_kind instr_f[64][3];
@@ -70,7 +70,7 @@ static void generate_instr_format(struct sema_context *ctx) {
 
 
 static enum sema_result analyze_loc_label_stmt(struct ast_loc_label_stmt *stmt, struct sema_context *ctx) {
-    stmt->offset = ctx->code_len;
+    stmt->offset = ctx->code_offset;
     return SEMA_OK;
 }
 
@@ -81,20 +81,38 @@ static enum sema_result analyze_code_label_stmt(struct ast_label_stmt *stmt, str
         return SEMA_ERR;
     }
 
-    try_else(hashmap_add(&ctx->symbol_table, stmt->ident.token->lexeme, ctx->code_len), HMAP_OK, return SEMA_ERR);
+    try_else(hashmap_add(&ctx->symbol_table, stmt->ident.token->lexeme, ctx->code_offset), HMAP_OK, return SEMA_ERR);
 
     return SEMA_OK;
 }
 
-static enum sema_result analyze_start_stmt(struct sema_context *ctx) {
-    if (hashmap_find(&ctx->symbol_table, ".start") == HMAP_OK) {
-        ctx->col = 0;
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "Redefinition of '.start' label.");
+static enum sema_result analyze_org_stmt(struct ast_org_stmt *stmt, struct sema_context *ctx) {
+
+
+    if (stmt->number.token->number < 0) {
+        ctx->col = stmt->number.token->col;
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Origin cannot be negative.");
+        return SEMA_ERR;
+
+
+    }
+
+    if (stmt->number.token->number % 4 != 0) {
+        ctx->col = stmt->number.token->col;
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Origin must be a multiple of 4");
+        return SEMA_ERR;
+    }
+
+    if ((uint32_t)stmt->number.token->number < ctx->code_offset) {
+        ctx->col = stmt->number.token->col;
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Cannot set origin to an already used address.");
         return SEMA_ERR;
     }
 
 
-    try_else(hashmap_add(&ctx->global_symbol_table, ".start", ctx->code_len), HMAP_OK, return SEMA_ERR);
+    uint32_t tmp_offset = stmt->number.token->number - ctx->code_offset;
+    ctx->code_offset = stmt->number.token->number;
+    stmt->offset = tmp_offset;
 
     return SEMA_OK;
 }
@@ -106,7 +124,7 @@ static enum sema_result analyze_data_label_stmt(struct ast_label_stmt *stmt, str
         return SEMA_ERR;
     }
 
-    try_else(hashmap_add(&ctx->symbol_table, stmt->ident.token->lexeme, ctx->data_len + ctx->code_len), HMAP_OK, return SEMA_ERR);
+    try_else(hashmap_add(&ctx->symbol_table, stmt->ident.token->lexeme, ctx->data_offset + ctx->code_offset), HMAP_OK, return SEMA_ERR);
 
     return SEMA_OK;
 }
@@ -144,7 +162,7 @@ static enum sema_result analyze_bytes_stmt(struct ast_bytes_stmt *stmt, struct s
         }
     }
 
-    ctx->data_len += len;
+    ctx->data_offset += len;
 
     return SEMA_OK;
 
@@ -163,7 +181,7 @@ static enum sema_result analyze_byte_stmt(struct ast_byte_stmt *stmt, struct sem
         return SEMA_ERR;
     }
 
-    ctx->data_len += 1;
+    ctx->data_offset += 1;
 
     return SEMA_OK;
 }
@@ -287,7 +305,7 @@ static enum sema_result analyze_instruction_stmt(struct ast_instruction_stmt *st
     }
 
 
-    ctx->code_len += 4;
+    ctx->code_offset += 4;
     return SEMA_OK;
 
 
@@ -300,8 +318,8 @@ static enum sema_result analyze_code_stmt(struct ast_code_stmt *stmt, struct sem
         try_else(analyze_code_label_stmt(&stmt->label_stmt, ctx), SEMA_OK, goto _error);
     } else if (stmt->kind == AST_CODE_STMT_LOC_LABEL) {
         try_else(analyze_loc_label_stmt(&stmt->loc_label_stmt, ctx), SEMA_OK, goto _error);
-    } else if (stmt->kind == AST_CODE_STMT_START) {
-        try_else(analyze_start_stmt(ctx), SEMA_OK, goto _error);
+    } else if (stmt->kind == AST_CODE_STMT_ORG) {
+        try_else(analyze_org_stmt(&stmt->org_stmt, ctx), SEMA_OK, goto _error);
     }
 
     return SEMA_OK;
@@ -346,7 +364,7 @@ static enum sema_result analyze_code_sections(struct ast_file *file, struct sema
 
 
 
-static enum sema_result analyze_global_stmt(struct ast_glob_stmt *stmt, struct sema_context *ctx) {
+static enum sema_result analyze_glob_stmt(struct ast_glob_stmt *stmt, struct sema_context *ctx) {
     const char *ident = stmt->ident.token->lexeme;
     uint32_t offset;
 
@@ -368,7 +386,7 @@ static enum sema_result analyze_extern_stmt(struct ast_extern_stmt *stmt, struct
 
 static enum sema_result analyze_head_stmt(struct ast_head_stmt *stmt, struct sema_context *ctx) {
     if (stmt->kind == AST_HEAD_STMT_GLOB) {
-        try_else(analyze_global_stmt(&stmt->glob_stmt, ctx), SEMA_OK, goto _error);
+        try_else(analyze_glob_stmt(&stmt->glob_stmt, ctx), SEMA_OK, goto _error);
     } else if (stmt->kind == AST_HEAD_STMT_EXTERN) {
         try_else(analyze_extern_stmt(&stmt->extern_stmt, ctx), SEMA_OK, goto _error);
     }
@@ -405,13 +423,14 @@ enum sema_result perform_semantic_analysis(struct ast_file *file, struct sema_ou
     struct sema_context ctx = {
         .col = 1,
         .line = 1,
-        .data_len = 0,
-        .code_len = 0,
+        .data_offset = 0,
+        .code_offset = 0,
     };
 
     bool _symbol_table_init = false;
     bool _global_symbol_table_init = false;
     bool _external_symbol_table_init = false;
+
     try_else(hashmap_init(&ctx.symbol_table, 256), HMAP_OK, goto _error);
     _symbol_table_init = true;
 
@@ -440,8 +459,8 @@ enum sema_result perform_semantic_analysis(struct ast_file *file, struct sema_ou
     out->global_symbol_table = ctx.global_symbol_table;
     out->external_symbol_table = ctx.external_symbol_table;
     out->symbol_table = ctx.symbol_table;
-    out->code_len = ctx.code_len;
-    out->data_len = ctx.data_len;
+    out->code_len = ctx.code_offset;
+    out->data_len = ctx.data_offset;
 
 
 

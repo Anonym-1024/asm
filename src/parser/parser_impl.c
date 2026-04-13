@@ -264,7 +264,7 @@ static bool follows_code_stmt(struct parser_context *ctx) {
             //|| is_matching_kind(ctx, 0, TOKEN_MACRO)
             || is_matching_kind(ctx, 0, TOKEN_IDENT)
             || is_matching_directive(ctx, 0, DIR_L)
-            || is_matching_directive(ctx, 0, DIR_START);
+            || is_matching_directive(ctx, 0, DIR_ORG);
 }
 
 enum parser_result parse_data_stmts(struct parser_context *ctx, struct ast_data_stmt **stmts, uint32_t *stmt_n) {
@@ -697,9 +697,9 @@ enum parser_result parse_code_stmt(struct parser_context *ctx, struct ast_code_s
         stmt->kind = AST_CODE_STMT_LOC_LABEL;
         try_else(parse_loc_label_stmt(ctx, &stmt->loc_label_stmt), PARSER_OK, goto _error);
 
-    } else if (is_matching_directive(ctx, 0, DIR_START)) {
-        stmt->kind = AST_CODE_STMT_START;
-        try_else(parse_start_stmt(ctx), PARSER_OK, goto _error);
+    } else if (is_matching_directive(ctx, 0, DIR_ORG)) {
+        stmt->kind = AST_CODE_STMT_ORG;
+        try_else(parse_org_stmt(ctx, &stmt->org_stmt), PARSER_OK, goto _error);
     } else {
         snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected an instruction, label or a local label statement");
         goto _error;
@@ -727,17 +727,18 @@ _error:
     return PARSER_ERR;
 }
 
-enum parser_result parse_start_stmt(struct parser_context *ctx) {
-    if (!is_matching_directive(ctx, 0, DIR_START)) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected '.start'");
+enum parser_result parse_org_stmt(struct parser_context *ctx, struct ast_org_stmt *stmt) {
+    if (!is_matching_directive(ctx, 0, DIR_ORG)) {
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected '.org'");
         goto _error;
     }
     next(ctx);
 
-    if (!is_matching_punctuation(ctx, 0, PUNCT_SEMICOLON)) {
-        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected ':'");
+    if (!is_matching_kind(ctx, 0, TOKEN_NUM)) {
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Expected a number.");
         goto _error;
     }
+    copy_terminal(ctx, &stmt->number);
     next(ctx);
 
 

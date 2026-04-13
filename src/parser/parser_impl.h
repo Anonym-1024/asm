@@ -15,7 +15,7 @@ struct parser_context {
 
     uint32_t line;
     uint16_t col;
-    char error_msg[ERR_MSG_LEN];
+    char error_msg[ERR_MSG_LEN + 1];
 };
 
 
@@ -59,7 +59,7 @@ enum parser_result parse_code_stmts(struct parser_context *ctx, struct ast_code_
 
 enum parser_result parse_code_stmt(struct parser_context *ctx, struct ast_code_stmt *stmt);
 
-enum parser_result parse_start_stmt(struct parser_context *ctx);
+enum parser_result parse_org_stmt(struct parser_context *ctx, struct ast_org_stmt *stmt);
 
 enum parser_result parse_instruction_stmt(struct parser_context *ctx, struct ast_instruction_stmt *stmt);
 

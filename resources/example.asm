@@ -1,19 +1,46 @@
 
-.HEAD:
-    .glob j
-    .extern ja
-
 
 .CODE:
 
-    mov(ses) r6, #0f6x
+.start:
 
-    j:
-    ldr r8, =j
-    .start:
+
+
+
+   mov r0, #255
+
+    lsls r0, r0
+    csl r8, r8
+
+    lsls r0, r0
+    csl r8, r8
+
+    lsls r0, r0
+    csl r8, r8
+
+    lsls r0, r0
+    csl r8, r8
+
+    lsls r0, r0
+    csl r8, r8
+
+    lsls r0, r0
+    csl r8, r8
+
+     lsls r0, r0
+    csl r8, r8
+
+    lsls r0, r0
+    csl r8, r8
+
+    lsls r0, r0
+    csl r8, r8
+
+
     exit
 
 
 .DATA:
-l:
-    bytes(10) "ahojjjdj"
+
+hodnota:
+    byte

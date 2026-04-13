@@ -95,7 +95,7 @@ void ast_code_stmt_deinit(struct ast_code_stmt *node) {
 
     break;
 
-    case AST_CODE_STMT_START:
+    case AST_CODE_STMT_ORG:
     break;
     }
 

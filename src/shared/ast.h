@@ -148,11 +148,19 @@ struct ast_loc_label_stmt {
     };
 };
 
+
+struct ast_org_stmt {
+    union {
+        struct ast_terminal number;
+        uint32_t offset;
+    };
+};
+
 enum ast_code_stmt_kind {
     AST_CODE_STMT_INSTRUCTION,
     AST_CODE_STMT_LABEL,
     AST_CODE_STMT_LOC_LABEL,
-    AST_CODE_STMT_START
+    AST_CODE_STMT_ORG
 };
 
 struct ast_code_stmt {
@@ -162,6 +170,7 @@ struct ast_code_stmt {
         struct ast_instruction_stmt instruction_stmt;
         struct ast_label_stmt label_stmt;
         struct ast_loc_label_stmt loc_label_stmt;
+        struct ast_org_stmt org_stmt;
     };
 };
 

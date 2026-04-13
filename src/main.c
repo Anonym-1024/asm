@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "error/compiler_error.h"
 #include "compilation/compilation.h"
@@ -22,6 +23,7 @@ int main(int argc, const char **argv) {
     const char *c_input = NULL;
     const char **l_input = NULL;
     int l_input_len = 0;
+    bool s_flag = false;
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-o") == 0) {
             if (i+1 >= argc) {
@@ -54,14 +56,21 @@ int main(int argc, const char **argv) {
             l_input = &argv[i+1];
 
         }
-        
+
+
+        if (strcmp(argv[i], "-S") == 0) {
+
+
+            s_flag = true;
+        }
+
     }
 
     if (c_input != NULL && l_input != NULL) {
         printf("\033[31mConnot use both '-l' and '-c' at the same time.\n\033[0m");
         return -1;
     }
-    
+
     struct compiler_error error;
     if (c_input != NULL) {
         enum compilation_result c_res;
@@ -70,15 +79,15 @@ int main(int argc, const char **argv) {
             print_compiler_error(stderr, &error);
             return -1;
         }
-        
+
     } else if (l_input != NULL) {
         enum linker_result l_res;
-        l_res = link_object_files(l_input, l_input_len, output, &error);
+        l_res = link_object_files(l_input, l_input_len, s_flag, output, &error);
         if (l_res != LINK_OK) {
             print_compiler_error(stderr, &error);
             return -1;
         }
-        
+
     } else {
         printf("\033[31mUse '-c <file>' or '-l <files>'.\n\033[0m");
         return -1;

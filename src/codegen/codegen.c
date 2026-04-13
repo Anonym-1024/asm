@@ -20,7 +20,7 @@ struct codegen_context {
     FILE *out;
     uint32_t line;
     uint32_t col;
-    char err_msg[ERR_MSG_LEN];
+    char err_msg[ERR_MSG_LEN + 1];
 };
 
 
@@ -28,9 +28,7 @@ struct codegen_context {
 static enum codegen_result write_int32(FILE *out, uint32_t n) {
     uint8_t byte = n & 0xFF;
     for (int i = 0; i < 4; i++) {
-        if (fwrite(&byte, 1, 1, out) != 1) {
-            return CODEGEN_ERR;
-        }
+        try_else(fwrite(&byte, 1, 1, out), 1, return CODEGEN_ERR);
         n >>= 8;
         byte = n & 0xFF;
     }
@@ -157,8 +155,8 @@ static void add_arg(uint8_t *byte1, uint8_t *byte2, uint32_t argc, uint32_t arg)
 }
 
 static void add_imm16(uint8_t *byte2, uint8_t *byte3, uint16_t imm) {
-    *byte2 |= imm;
-    *byte3 |= (imm >> 8);
+    *byte3 |= imm;
+    *byte2 |= (imm >> 8);
 }
 
 
@@ -226,7 +224,7 @@ static enum codegen_result generate_instruction_stmt(struct ast_instruction_stmt
                 break;
             case AST_ARG_IMMEDIATE:
                 byte1 |= 0x10;
-                byte3 |= arg->immediate.token->number;
+                add_imm16(&byte2, &byte3, arg->immediate.token->number);
                 break;
         }
     }
@@ -240,9 +238,20 @@ static enum codegen_result generate_instruction_stmt(struct ast_instruction_stmt
 
     return CODEGEN_OK;
 }
+
+
+static enum codegen_result generate_org_stmt(struct ast_org_stmt *stmt, struct codegen_context *ctx) {
+    for (uint32_t i = 0; i < stmt->offset; i += 4) {
+        try_else(fwrite(&(uint8_t[5]){0, 0, 0, 0, 0}, 1, 5, ctx->out), 5, return CODEGEN_ERR);
+    }
+    return CODEGEN_OK;
+}
+
 static enum codegen_result generate_code_stmt(struct ast_code_stmt *stmt, struct codegen_context *ctx, struct ast_code_section *sec, uint32_t pos) {
     if (stmt->kind == AST_CODE_STMT_INSTRUCTION) {
         try_else(generate_instruction_stmt(&stmt->instruction_stmt, ctx, sec, pos), CODEGEN_OK, goto _error);
+    } else if (stmt->kind == AST_CODE_STMT_ORG) {
+        try_else(generate_org_stmt(&stmt->org_stmt, ctx), CODEGEN_OK, goto _error);
     }
 
     return CODEGEN_OK;
@@ -279,9 +288,8 @@ static enum codegen_result generate_symbol_table(struct hashmap *table, FILE *ou
         while (item != NULL) {
 
             unsigned long len = strlen(item->key) + 1;
-            if (fwrite(item->key, sizeof(char), len, out) != len) {
-                return CODEGEN_ERR;
-            }
+            try_else(fwrite(item->key, sizeof(char), len, out), len, return CODEGEN_ERR);
+
             try_else(write_int32(out, item->value), CODEGEN_OK, return CODEGEN_ERR);
 
             item = item->next;

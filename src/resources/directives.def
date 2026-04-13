@@ -1,7 +1,7 @@
 X(DATA, .DATA)
 X(CODE, .CODE)
 X(HEAD, .HEAD)
-X(START, .start)
+X(ORG, .org)
 X(L, .l)
 X(B, .b)
 X(F, .f)

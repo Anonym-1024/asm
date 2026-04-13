@@ -19,7 +19,7 @@ struct lexer_context {
     struct vector buffer; //! Owned
     bool _buffer;
 
-    char error_msg[ERR_MSG_LEN];
+    char error_msg[ERR_MSG_LEN + 1];
 
     struct hashmap dir_map;
     struct hashmap instr_map;

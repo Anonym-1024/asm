@@ -17,8 +17,9 @@ numbers = [ ?TOKEN_NUM?, { ",", ?TOKEN_NUM? } ];
 code_section = code_dir, code_stmts;
 code_dir = ".CODE", ":", "\n";
 code_stmts = { code_stmt };
-code_stmt = instruction_stmt | macro_stmt | label_stmt | loc_label_stmt | start_stmt;
-start_stmt = ".start", ":", "\n";
+code_stmt = instruction_stmt | macro_stmt | label_stmt | loc_label_stmt | org_stmt;
+// REMOVED: start_stmt = ".start", ":", "\n";
+org_stmt = ".org", ?TOKEN_NUM?;
 instruction_stmt = ?TOKEN_INSTR?, [ condition_code ], args, "\n";
 condition_code = "(", ?TOKEN_COND_CODE?, ")";
 args = [ arg, { ",", arg} ];
@@ -35,5 +36,3 @@ head_stmts = { head_stmt };
 head_stmt = glob_stmt | extern_stmt;
 glob_stmt = ".glob", ?TOKEN_IDENT?, "\n";
 extern_stmt = ".extern", ?TOKEN_IDENT?, "\n";
-
-

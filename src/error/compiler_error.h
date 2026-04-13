@@ -22,7 +22,7 @@ struct compiler_error {
     enum compiler_error_kind kind;
     size_t line;
     size_t col;
-    char msg[ERR_MSG_LEN];
+    char msg[ERR_MSG_LEN + 1];
     const char *file;
 };
 

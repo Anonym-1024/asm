@@ -43,7 +43,7 @@ struct linker_context {
 
     struct hashmap global_symbol_table;
 
-    char err_msg[ERR_MSG_LEN];
+    char err_msg[ERR_MSG_LEN + 1];
     const char *current_file;
 
 };
@@ -157,7 +157,7 @@ static enum linker_result build_symbol_table(struct linker_context *ctx) {
 
 
 
-    uint32_t global_code_offset = 4;
+    uint32_t global_code_offset = 0;
     uint32_t global_data_offset = 0;
     for (int i = 0; i < ctx->objs_n; i++) {
         struct object_file *obj = &ctx->objs[i];
@@ -235,7 +235,7 @@ static enum linker_result resolve_label(struct linker_context *ctx, struct compi
 
 static enum linker_result write_code_sections(struct linker_context *ctx) {
 
-    uint32_t global_code_offset = 4;
+    uint32_t global_code_offset = 0;
     uint32_t global_data_offset = 0;
 
     struct compiled_instruction instr;
@@ -283,7 +283,7 @@ static enum linker_result write_data_sections(struct linker_context *ctx) {
 
 
 static enum linker_result calculate_total_len(struct linker_context *ctx) {
-    ctx->total_code_len = 4;
+    ctx->total_code_len = 0;
     ctx->total_data_len = 0;
     for (int i = 0; i < ctx->objs_n; i++) {
         struct object_file *obj = &ctx->objs[i];
@@ -298,8 +298,26 @@ static enum linker_result calculate_total_len(struct linker_context *ctx) {
 }
 
 
+static void save_symbol_table(struct hashmap *table) {
+    FILE *out = fopen("_linker_global_symbols.txt", "w");
 
-enum linker_result link_object_files(const char **files, int files_n, const char *out, struct compiler_error *err) {
+    if (out == NULL) {
+        return;
+    }
+    for (size_t i = 0; i < table->size; i++) {
+        struct hashmap_item *item = table->table[i];
+        while (item != NULL) {
+
+            fprintf(out, "%-15s: #%04x (%d)\n", item->key, item->value, item->value);
+
+            item = item->next;
+        }
+    }
+    fclose(out);
+}
+
+
+enum linker_result link_object_files(const char **files, int files_n, bool s_flag, const char *out, struct compiler_error *err) {
 
     struct linker_context ctx = {
         .current_file = "",
@@ -324,12 +342,10 @@ enum linker_result link_object_files(const char **files, int files_n, const char
     try_else(build_symbol_table(&ctx), LINK_OK, goto _error);
     _table = true;
 
-
-    uint32_t start;
-    if (hashmap_get(&ctx.global_symbol_table, ".start", &start) == HMAP_NO_ENTRY) {
-        snprintf(ctx.err_msg, ERR_MSG_LEN, "Symbol '.start' has not been defined.");
-        goto _error;
+    if (s_flag) {
+        save_symbol_table(&ctx.global_symbol_table);
     }
+
 
 
 
@@ -343,7 +359,7 @@ enum linker_result link_object_files(const char **files, int files_n, const char
     }
 
 
-    try_else(fwrite(&(uint8_t[]){0x05, 0xb0, start, start>>8}, sizeof(uint8_t), 4, ctx.out), 4, return LINK_ERR);
+
 
     try_else(write_code_sections(&ctx), LINK_OK, goto _error);
     try_else(write_data_sections(&ctx), LINK_OK, goto _error);
