@@ -117,7 +117,15 @@ struct ast_label_stmt {
 enum ast_data_stmt_kind {
     AST_DATA_STMT_BYTE,
     AST_DATA_STMT_BYTES,
-    AST_DATA_STMT_LABEL
+    AST_DATA_STMT_LABEL,
+    AST_DATA_STMT_ORG
+};
+
+struct ast_org_stmt {
+    union {
+        struct ast_terminal number;
+        uint32_t offset;
+    };
 };
 
 struct ast_data_stmt {
@@ -127,6 +135,7 @@ struct ast_data_stmt {
         struct ast_byte_stmt byte_stmt;
         struct ast_bytes_stmt bytes_stmt;
         struct ast_label_stmt label_stmt;
+        struct ast_org_stmt org_stmt;
     };
 };
 
@@ -149,12 +158,7 @@ struct ast_loc_label_stmt {
 };
 
 
-struct ast_org_stmt {
-    union {
-        struct ast_terminal number;
-        uint32_t offset;
-    };
-};
+
 
 enum ast_code_stmt_kind {
     AST_CODE_STMT_INSTRUCTION,

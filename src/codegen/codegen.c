@@ -79,11 +79,20 @@ static enum codegen_result generate_bytes_stmt(struct ast_bytes_stmt *stmt, stru
     return CODEGEN_OK;
 }
 
+static enum codegen_result generate_data_org_stmt(struct ast_org_stmt *stmt, struct codegen_context *ctx) {
+    for (uint32_t i = 0; i < stmt->offset; i++) {
+        try_else(fwrite(&(uint8_t[1]){0}, 1, 1, ctx->out), 1, return CODEGEN_ERR);
+    }
+    return CODEGEN_OK;
+}
+
 static enum codegen_result generate_data_stmt(struct ast_data_stmt *stmt, struct codegen_context *ctx) {
     if (stmt->kind == AST_DATA_STMT_BYTE) {
         try_else(generate_byte_stmt(&stmt->byte_stmt, ctx), CODEGEN_OK, return CODEGEN_ERR);
     } else if (stmt->kind == AST_DATA_STMT_BYTES) {
         try_else(generate_bytes_stmt(&stmt->bytes_stmt, ctx), CODEGEN_OK, return CODEGEN_ERR);
+    } else if (stmt->kind == AST_DATA_STMT_ORG) {
+        try_else(generate_data_org_stmt(&stmt->org_stmt, ctx), CODEGEN_OK, return CODEGEN_ERR);
     }
 
 
@@ -240,7 +249,7 @@ static enum codegen_result generate_instruction_stmt(struct ast_instruction_stmt
 }
 
 
-static enum codegen_result generate_org_stmt(struct ast_org_stmt *stmt, struct codegen_context *ctx) {
+static enum codegen_result generate_code_org_stmt(struct ast_org_stmt *stmt, struct codegen_context *ctx) {
     for (uint32_t i = 0; i < stmt->offset; i += 4) {
         try_else(fwrite(&(uint8_t[5]){0, 0, 0, 0, 0}, 1, 5, ctx->out), 5, return CODEGEN_ERR);
     }
@@ -251,7 +260,7 @@ static enum codegen_result generate_code_stmt(struct ast_code_stmt *stmt, struct
     if (stmt->kind == AST_CODE_STMT_INSTRUCTION) {
         try_else(generate_instruction_stmt(&stmt->instruction_stmt, ctx, sec, pos), CODEGEN_OK, goto _error);
     } else if (stmt->kind == AST_CODE_STMT_ORG) {
-        try_else(generate_org_stmt(&stmt->org_stmt, ctx), CODEGEN_OK, goto _error);
+        try_else(generate_code_org_stmt(&stmt->org_stmt, ctx), CODEGEN_OK, goto _error);
     }
 
     return CODEGEN_OK;

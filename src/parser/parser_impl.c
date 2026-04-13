@@ -256,7 +256,8 @@ _error:
 bool follows_data_stmt(struct parser_context *ctx) {
     return is_matching_data_unit(ctx, 0, DATA_BYTE)
             || is_matching_data_unit(ctx, 0, DATA_BYTES)
-            || is_matching_kind(ctx, 0, TOKEN_IDENT);
+            || is_matching_kind(ctx, 0, TOKEN_IDENT)
+            || is_matching_directive(ctx, 0, DIR_ORG);
 }
 
 static bool follows_code_stmt(struct parser_context *ctx) {
@@ -328,6 +329,9 @@ enum parser_result parse_data_stmt(struct parser_context *ctx, struct ast_data_s
     } else if (is_matching_kind(ctx, 0, TOKEN_IDENT)) {
         stmt->kind = AST_DATA_STMT_LABEL;
         try_else(parse_label_stmt(ctx, &stmt->label_stmt), PARSER_OK, goto _error);
+    } else if (is_matching_directive(ctx, 0, DIR_ORG)) {
+        stmt->kind = AST_DATA_STMT_ORG;
+        try_else(parse_org_stmt(ctx, &stmt->org_stmt), PARSER_OK, goto _error);
     } else {
         snprintf(ctx->error_msg,  ERR_MSG_LEN, "Expected statement 'byte', 'bytes', or a label");
         goto _error;

@@ -69,6 +69,9 @@ void ast_data_stmt_deinit(struct ast_data_stmt *node) {
 
     case AST_DATA_STMT_LABEL:
     break;
+
+    case AST_DATA_STMT_ORG:
+    break;
     }
 }
 

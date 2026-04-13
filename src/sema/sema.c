@@ -86,7 +86,7 @@ static enum sema_result analyze_code_label_stmt(struct ast_label_stmt *stmt, str
     return SEMA_OK;
 }
 
-static enum sema_result analyze_org_stmt(struct ast_org_stmt *stmt, struct sema_context *ctx) {
+static enum sema_result analyze_code_org_stmt(struct ast_org_stmt *stmt, struct sema_context *ctx) {
 
 
     if (stmt->number.token->number < 0) {
@@ -112,6 +112,32 @@ static enum sema_result analyze_org_stmt(struct ast_org_stmt *stmt, struct sema_
 
     uint32_t tmp_offset = stmt->number.token->number - ctx->code_offset;
     ctx->code_offset = stmt->number.token->number;
+    stmt->offset = tmp_offset;
+
+    return SEMA_OK;
+}
+
+static enum sema_result analyze_data_org_stmt(struct ast_org_stmt *stmt, struct sema_context *ctx) {
+
+
+    if (stmt->number.token->number < 0) {
+        ctx->col = stmt->number.token->col;
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Origin cannot be negative.");
+        return SEMA_ERR;
+
+    }
+
+
+
+    if ((uint32_t)stmt->number.token->number < (ctx->data_offset + ctx->code_offset)) {
+        ctx->col = stmt->number.token->col;
+        snprintf(ctx->error_msg, ERR_MSG_LEN, "Cannot set origin to an already used address.");
+        return SEMA_ERR;
+    }
+
+
+    uint32_t tmp_offset = stmt->number.token->number - ctx->code_offset - ctx->data_offset;
+    ctx->data_offset = stmt->number.token->number - ctx->code_offset;
     stmt->offset = tmp_offset;
 
     return SEMA_OK;
@@ -193,6 +219,8 @@ static enum sema_result analyze_data_stmt(struct ast_data_stmt *stmt, struct sem
         try_else(analyze_bytes_stmt(&stmt->bytes_stmt, ctx), SEMA_OK, goto _error);
     } else if (stmt->kind == AST_DATA_STMT_LABEL) {
         try_else(analyze_data_label_stmt(&stmt->label_stmt, ctx), SEMA_OK, goto _error);
+    } else if (stmt->kind == AST_DATA_STMT_ORG) {
+        try_else(analyze_data_org_stmt(&stmt->org_stmt, ctx), SEMA_OK, goto _error);
     }
 
 
@@ -319,7 +347,7 @@ static enum sema_result analyze_code_stmt(struct ast_code_stmt *stmt, struct sem
     } else if (stmt->kind == AST_CODE_STMT_LOC_LABEL) {
         try_else(analyze_loc_label_stmt(&stmt->loc_label_stmt, ctx), SEMA_OK, goto _error);
     } else if (stmt->kind == AST_CODE_STMT_ORG) {
-        try_else(analyze_org_stmt(&stmt->org_stmt, ctx), SEMA_OK, goto _error);
+        try_else(analyze_code_org_stmt(&stmt->org_stmt, ctx), SEMA_OK, goto _error);
     }
 
     return SEMA_OK;
