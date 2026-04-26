@@ -40,9 +40,10 @@ static enum codegen_result write_int32(FILE *out, uint32_t n) {
 
 static enum codegen_result generate_byte_stmt(struct ast_byte_stmt *stmt, struct codegen_context *ctx) {
     if (stmt->init.kind == AST_INIT_NUM) {
-        try_else(write_int32(ctx->out, stmt->init.number.token->number), CODEGEN_OK, return CODEGEN_ERR);
+        uint8_t byte = stmt->init.number.token->number & 0xff;
+        try_else(fwrite(&byte, 1, 1, ctx->out), 1, return CODEGEN_ERR);
     } else {
-        try_else(write_int32(ctx->out, 0), CODEGEN_OK, return CODEGEN_ERR);
+        try_else(fwrite(&(uint8_t){0}, 1, 1, ctx->out), 1, return CODEGEN_ERR);
     }
     return CODEGEN_OK;
 

@@ -534,7 +534,7 @@ enum lexer_result tokenise(struct source_file *in, struct token **out, uint32_t 
         } else if (ctx.c == '.') {
             try_else(read_directive(&ctx), LEX_OK, goto _error);
 
-        else if (ctx.c == '"') {
+        } else if (ctx.c == '"') {
             try_else(read_ascii(&ctx), LEX_OK, goto _error);
 
         } else if (is_digit_char(ctx.c) || ctx.c == '-') {
