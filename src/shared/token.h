@@ -14,6 +14,7 @@ enum token_kind {
     TOKEN_PORT,
     TOKEN_ADDR_REG,
     TOKEN_NUM,
+    TOKEN_CHAR,
     TOKEN_ASCII,
     TOKEN_IDENT,
     TOKEN_PUNCT,
@@ -83,6 +84,7 @@ struct token {
     union {
         char *lexeme;
         int32_t number;
+        int32_t character;
         enum instruction_token instr;
         enum directive_token dir;
         enum data_unit_token data_unit;

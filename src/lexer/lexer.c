@@ -1,11 +1,16 @@
 
 #include "lexer.h"
 
+
 #include <ctype.h>
+#include "error/compiler_error.h"
 #include "libs/vector/vector.h"
 #include "libs/hashmap/hashmap.h"
 #include "libs/error_handling.h"
+#include "shared/token.h"
 #include <errno.h>
+#include <stdint.h>
+#include <string.h>
 
 struct lexer_context {
     FILE *in; //! Reference
@@ -186,8 +191,8 @@ static enum lexer_result read_directive(struct lexer_context *ctx) {
         next(ctx);
     }
 
-    char term = 0;
-    try_else(vec_push(&ctx->buffer, &term), VEC_OK, goto _error);
+
+    try_else(vec_push(&ctx->buffer, &(char){0}), VEC_OK, goto _error);
 
 
 
@@ -317,24 +322,16 @@ static enum lexer_result read_ascii(struct lexer_context *ctx) {
 
 
 
-static enum lexer_result validate_number(struct lexer_context *ctx, const char *str, int32_t *n) {
-    int base = 10;
-    size_t len = strlen(str);
+static enum lexer_result validate_number(struct lexer_context *ctx, const char *str, int radix, int32_t *n) {
 
-    const char *end = &str[len-1];
-    if (*end == 'd') {
-    } else if (*end == 'x') {
-        base = 16;
-    } else if (*end == 'b') {
-        base = 2;
-    } else {
-        end++;
-    }
+
+
+
     char *endptr;
     errno = 0;
-    long res = strtol(str, &endptr, base);
+    long res = strtol(str, &endptr, radix);
 
-    if (endptr != end) {
+    if (*endptr != '\0') {
         strcpy(ctx->error_msg, "Invalid number litaral");
         return LEX_ERR;
     }
@@ -345,7 +342,7 @@ static enum lexer_result validate_number(struct lexer_context *ctx, const char *
 
 
     *n = res;
-    vec_empty(&ctx->buffer);
+
     return LEX_OK;
 }
 
@@ -354,33 +351,62 @@ static enum lexer_result read_number(struct lexer_context *ctx) {
     ctx->start_col = ctx->col;
 
 
+
+    if (ctx->c == '-') {
+        try_else(vec_push(&ctx->buffer, &ctx->c), VEC_OK, return LEX_ERR);
+        next(ctx);
+    }
+
+    if (!is_digit_char(ctx->c)) {
+        strncpy(ctx->error_msg, "Invalid number literal.", ERR_MSG_LEN);
+        return LEX_ERR;
+    }
     try_else(vec_push(&ctx->buffer, &ctx->c), VEC_OK, return LEX_ERR);
+
+    bool prefix = false;
+    if (ctx->c == '0') {
+        prefix = true;
+    }
     next(ctx);
 
-    while (ctx->c != EOF && is_hex_digit_char(ctx->c)) {
+    int radix = 10;
+    if (prefix && is_radix_char(ctx->c)) {
+        switch (ctx->c) {
+        case 'd':
+            radix = 10;
+            break;
+
+        case 'x':
+            radix = 16;
+            break;
+
+        case 'b':
+            radix = 2;
+            break;
+        }
+        next(ctx);
+    }
+
+    while (is_hex_digit_char(ctx->c)) {
         try_else(vec_push(&ctx->buffer, &ctx->c), VEC_OK, return LEX_ERR);
         next(ctx);
     }
 
-    if (ctx->c != EOF && is_radix_char(ctx->c)) {
-        try_else(vec_push(&ctx->buffer, &ctx->c), VEC_OK, return LEX_ERR);
-        next(ctx);
-    }
 
-    char term = 0;
-    try_else(vec_push(&ctx->buffer, &term), VEC_OK, return LEX_ERR;);
+    try_else(vec_push(&ctx->buffer, &(char){0}), VEC_OK, return LEX_ERR);
 
     int32_t n;
-    try_else(validate_number(ctx, ctx->buffer.ptr, &n), LEX_OK, return LEX_ERR);
+    try_else(validate_number(ctx, ctx->buffer.ptr, radix, &n), LEX_OK, return LEX_ERR);
+
 
     struct token t = {
-        //.line = ctx->line,
         .col = ctx->start_col,
         .kind = TOKEN_NUM,
         .number = n
     };
-    try_else(vec_push(&ctx->out, &t), VEC_OK, return LEX_ERR;);
+    try_else(vec_push(&ctx->out, &t), VEC_OK, return LEX_ERR);
 
+    vec_empty(&ctx->buffer);
 
 
     return LEX_OK;
@@ -388,13 +414,39 @@ static enum lexer_result read_number(struct lexer_context *ctx) {
 
 }
 
+static enum lexer_result read_char(struct lexer_context *ctx) {
 
+    ctx->start_col = ctx->col;
+
+    next(ctx);
+
+    if (ctx->c == EOF) {
+        strcpy(ctx->error_msg, "Invalid char literal.");
+        return LEX_ERR;
+    }
+
+    struct token t = {
+        .col = ctx->start_col,
+        .kind = TOKEN_CHAR,
+        .character = ctx->c
+    };
+    try_else(vec_push(&ctx->out, &t), VEC_OK, return LEX_ERR;);
+    next(ctx);
+
+    if (ctx->c != '\'') {
+        strcpy(ctx->error_msg, "Unterminated char literal.");
+        return LEX_ERR;
+    }
+    next(ctx);
+
+    return LEX_OK;
+
+}
 
 static enum lexer_result make_hash_maps(struct lexer_context *ctx) {
 
     bool _dir_map = false;
     bool _instr_map = false;
-    //_map = false;
     bool _reg_map = false;
     bool _sys_reg_map = false;
     bool _addr_reg_map = false;
@@ -536,6 +588,9 @@ enum lexer_result tokenise(struct source_file *in, struct token **out, uint32_t 
 
         } else if (ctx.c == '"') {
             try_else(read_ascii(&ctx), LEX_OK, goto _error);
+
+        } else if (ctx.c == '\'') {
+            try_else(read_char(&ctx), LEX_OK, goto _error);
 
         } else if (is_digit_char(ctx.c) || ctx.c == '-') {
             try_else(read_number(&ctx), LEX_OK, goto _error);

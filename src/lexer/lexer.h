@@ -2,9 +2,7 @@
 #ifndef __LEXER_HEADER__
 #define __LEXER_HEADER__
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+
 #include <stdbool.h>
 #include <stdint.h>
 

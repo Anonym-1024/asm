@@ -1,39 +1,27 @@
-file = sections, ?TOKEN_EOF?;
-sections = { section };
-section = data_section | code_section;
-
-data_section = data_dir, data_stmts;
-data_dir = ".DATA", ":", "\n";
-data_stmts = { data_stmt };
-data_stmt = byte_stmt | bytes_stmt | label_stmt | org_stmt;
-org_stmt = ".org", ?TOKEN_NUM?;
-
-byte_stmt = "byte", [ initializer ], "\n";
-bytes_stmt = "bytes", "(", ?TOKEN_NUM?, ")", [ initializer ], "\n";
-label_stmt = ?TOKEN_IDENT?, ":", "\n";
-initializer = ?TOKEN_NUM? | ?TOKEN_ASCII? | byte_initializer;
-byte_initializer = "{", numbers, "}";
-numbers = [ ?TOKEN_NUM?, { ",", ?TOKEN_NUM? } ];
-
-code_section = code_dir, code_stmts;
-code_dir = ".CODE", ":", "\n";
-code_stmts = { code_stmt };
-code_stmt = instruction_stmt | label_stmt | loc_label_stmt | org_stmt;
-// REMOVED: start_stmt = ".start", ":", "\n";
+file = { stmt };
+stmt = code_stmt | data_stmt | import_stmt | export_stmt | rep_stmt | endrep_stmt | label_stmt | loc_label_stmt | instruction_stmt | byte_stmt | word_stmt | dword_statement | qword_stmt | ascii_stmt | asciz_stmt
+code_stmt = ".CODE", [ "(", ?TOKEN_IDENT?, ")"];
+data_stmt = ".DATA", [ "(", ?TOKEN_IDENT?, ")"];
+export_stmt = ".export", ?TOKEN_IDENT?;
+import_stmt = ".import", ?TOKEN_IDENT?;
+rep_stmt = ".rep", ?TOKEN_NUM?;
+endrep_stmt = ".endrep";
+label_stmt = ?TOKEN_IDENT?, ":"
+loc_label_stmt = ".l", ?TOKEN_IDENT?, ":"
 
 instruction_stmt = ?TOKEN_INSTR?, [ condition_code ], args, "\n";
 condition_code = "(", ?TOKEN_COND_CODE?, ")";
 args = [ arg, { ",", arg} ];
 arg = ?TOKEN_REG? | ?TOKEN_SYS_REG? | ?TOKEN_ADDR_REG? | ?TOKEN_PORT? | immediate | label | loc_label;
-immediate = "#", ?TOKEN_NUM?;
+immediate = "#", ?TOKEN_NUM? | ?TOKEN_CHAR?;
 label = "=", ?TOKEN_IDENT?;
 loc_label = direction_dir, "=", ?TOKEN_IDENT?;
 direction_dir = ".f" | ".b";
 loc_label_stmt = ".l", ?TOKEN_IDENT?, ":", "\n";
 
-head_section = head_dir, head_stmts;
-head_dir = ".HEAD", ":", "\n";
-head_stmts = { head_stmt };
-head_stmt = glob_stmt | extern_stmt;
-glob_stmt = ".glob", ?TOKEN_IDENT?, "\n";
-extern_stmt = ".extern", ?TOKEN_IDENT?, "\n";
+byte_stmt = "byte", ( ?TOKEN_NUM? | ?TOKEN_CHAR? );
+word_stmt = "word", ( ?TOKEN_NUM? | ?TOKEN_CHAR? );
+dword_stmt = "dword", ( ?TOKEN_NUM? | ?TOKEN_CHAR? );
+qword_stmt = "qword", ( ?TOKEN_NUM? | ?TOKEN_CHAR? );
+ascii_stmt = "ascii", ( ?TOKEN_ASCII? );
+asciz_stmt = "asciz", ( ?TOKEN_ASCII? );

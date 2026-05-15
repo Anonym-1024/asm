@@ -1,2 +1,4 @@
-X(BYTE, byte)
-X(BYTES, bytes)
+X(BYTE, BYTE)
+X(WORD, WORD)
+X(DWORD, DWORD)
+X(QWORD, QWORD)
